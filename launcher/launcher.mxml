@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute">
+	<mx:Script source="launcher.as"/>
+	<mx:Label x="10" y="10" text="ABC Launcher" fontSize="20"/>
+	<mx:Button x="330" y="48" label="read" click="read()"/>
+	<mx:TextInput x="83" y="48" width="239" id="fileName" enter="read()"  text="hello.sx.abc"/>
+	<mx:Label x="10" y="50" text="File name:"/>
+	<mx:TextArea x="10" y="76" width="385" height="350" id="output" wordWrap="true" editable="true" enabled="true"/>	
+</mx:Application>
