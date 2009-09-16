@@ -210,6 +210,15 @@
 		 '((name (string 1)) (items (((key (string 2)) (value (string 3)))
 					     ((key (string 4)) (value (string 5)))))))
 
+(roundtrip-check write-traits_info read-traits_info
+		 '((kind slot)
+		   (name (multiname 3))
+		   (slot_id 1)
+		   (type_name (multiname 0))
+		   (vindex 0)
+		   (vkind 0)
+		   (metadata ())))
+
 ;;; Jump reader
 
 (check (find-label-new 10 '()) => '(10))

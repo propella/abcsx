@@ -709,7 +709,32 @@
 
 ;;; traits_info writer
 (define (write-traits_info x port)
-  (error "traits_info is not supported yet"))
+  (let ((kind (cadr (assoc 'kind x))))
+    (cond
+     ((eq? kind 'slot) (write-trait_slot x port))
+     ((eq? kind 'method) (error "method trait is not supported yet"))
+     ((eq? kind 'getter) (error "getter trait is not supported yet"))
+     ((eq? kind 'setter) (error "setter trait is not supported yet"))
+     ((eq? kind 'class) (error "class trait is not supported yet"))
+     ((eq? kind 'function) (error "function trait is not supported yet"))
+     ((eq? kind 'const) (error "const trait is not supported yet"))
+     (else (error (format "Unknown trait type ~a" kind))))))
+
+(define (write-trait_slot x port)
+  (let ((slot_id (ref 'slot_id x))
+	(type_name (ref 'type_name x))
+	(vindex (if (= (ref 'vindex x) 0)
+		    0
+		    (error "vindex is not supported yet")))
+	(metadata_count (if (null? (ref 'metadata x))
+			    0
+			    (error "metadata is not supported et"))))
+    (write-constant 'multiname (ref 'name x) port)
+    (write-u8 Trait_Slot port)
+    (write-u30 slot_id port)
+    (write-constant 'multiname type_name port)
+    (write-u30 0 port) ; vindex
+    ))
 
 ;;; instance_info writer
 (define (write-instance_info x port)
