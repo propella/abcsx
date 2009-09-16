@@ -1,0 +1,57 @@
+(asm
+ (ns_set ((ns_set (ns "") (private "call.as$0"))))
+ (method
+  (((signature
+     ((return_type *)
+      (param_type ())
+      (name "")
+      (flags 0)
+      (options ())
+      (param_names ())))
+    (hint
+     ((max_stack 2) (local_count 1) (init_scope_depth 1) (max_scope_depth 1)))
+    (code
+     ((0 findpropstrict ((ns_set 1) "print"))
+      (2 pushstring "Hello, World!")
+      (4 callproperty ((ns_set 1) "print") 1)
+      (7 pop)
+      (8 returnvoid)))
+    (trait ())
+    (exception ()))
+   ((signature
+     ((return_type *)
+      (param_type ())
+      (name "")
+      (flags 0)
+      (options ())
+      (param_names ())))
+    (hint
+     ((max_stack 2) (local_count 2) (init_scope_depth 1) (max_scope_depth 2)))
+    (code
+     ((0 getlocal_0)
+      (1 pushscope)
+      (2 newfunction (method 0))
+      (4 getglobalscope)
+      (5 swap)
+      (6 setslot 1)
+      (8 findpropstrict ((ns_set 1) "hello"))
+      (10 callproperty ((ns_set 1) "hello") 0)
+      (13 coerce_a)
+      (14 setlocal_1)
+      (15 getlocal_1)
+      (16 returnvalue)
+      (17 kill 1)))
+    (trait ())
+    (exception ()))))
+ (instance ())
+ (class ())
+ (script
+  (((init (method 1))
+    (trait
+     (((kind slot)
+       (name ((private "call.as$0") "hello"))
+       (slot_id 1)
+       (type_name *)
+       (vindex 0)
+       (vkind 0)
+       (metadata ()))))))))
