@@ -1,5 +1,6 @@
-function hello() {
-    print("Hello, World!");
+function hello(word) {
+    print(word);
 }
 
-hello();
+hello("Hello World!");
+

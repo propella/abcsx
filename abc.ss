@@ -127,19 +127,19 @@
   `(attribute ,x))
 
 (define (read-multiname_kind_QName port)
-  `((namespace ,(read-u30 port))
-    (string ,(read-u30 port))))
+  `(,(read-id 'namespace port)
+    ,(read-id 'string port)))
 
 (define (read-multiname_kind_RTQName port)
-  `(string ,(read-u30 port)))
+  (read-id 'string port))
 
 (define (read-multiname_kind_RTQNameL port)
   'RTQNameL)
 
 (define (read-multiname_kind_Multiname port)
-  (let ((name (read-u30 port))
-	(ns_set (read-u30 port)))
-    `((ns_set ,ns_set) (string ,name))))
+  (let ((name (read-id 'string port))
+	(ns_set (read-id 'ns_set port)))
+    `(,ns_set ,name)))
 
 (define (read-multiname_kind_MultinameL port)
   `(ns_set ,(read-u30 port)))
@@ -170,29 +170,29 @@
 
 (define (read-namespace_info port)
   (let ((kind (read-u8 port))
-	(name (read-u30 port)))
-    `(,(cdr (assoc kind CONSTANT_Namespace)) (string ,name))))
+	(name (read-id 'string port)))
+    `(,(cdr (assoc kind CONSTANT_Namespace)) ,name)))
 
 ;;; ns_set_info reader
 
 (define (read-ns_set_info port)
   (cons 'ns_set
-	(read-list0 (lambda (p) `(namespace ,(read-u30 p))) port)))
+	(read-list0 (lambda (p) (read-id 'namespace p)) port)))
 
 ;;; method_info reader
 
 (define (read-method_info port)
   (let* ((param_count (read-u30 port))
-	 (return_type (read-u30 port))
-	 (param_type (build-list param_count (lambda (_) (read-u30 port))))
-	 (name (read-u30 port))
+	 (return_type (read-id 'multiname port))
+	 (param_type (build-list param_count (lambda (_) (read-id 'multiname port))))
+	 (name (read-id 'string port))
 	 (flags (read-u8 port))
 	 (options (if (method-info-HAS_OPTIONAL flags) (read-option_info port) '()))
 	 (param_names (if (method-info-HAS_PARAM_NAMES flags) (read-param_info param_count port) '()))
 	 )
-    `((return_type (multiname ,return_type))
+    `((return_type ,return_type)
       (param_type ,param_type)
-      (name (string ,name))
+      (name ,name)
       (flags ,flags)
       (options ,options)
       (param_names ,param_names))))
@@ -214,8 +214,8 @@
     (items ,(read-list0 read-item_info port))))
 
 (define (read-item_info port)
-  `((key (string ,(read-u30 port)))
-    (value (string ,(read-u30 port)))))
+  `((key ,(read-id 'string port))
+    (value ,(read-id 'string port))))
 
 ;;; instance_info reader
 
@@ -234,8 +234,8 @@
 
 (define (read-instance_info port)
 ;  (printf "pos ~a\n" (file-position port))
-  (let* ((name (read-u30 port))
-	 (super_name (read-u30 port))
+  (let* ((name (read-id 'multiname port))
+	 (super_name (read-id 'multiname port))
 	 (flags (read-u8 port))
 	 (protectedNs (if (positive? (bitwise-and flags CONSTANT_ClassProtectedNs))
 			  (read-u30 port)
@@ -243,8 +243,8 @@
 	 (interface (read-list0 read-u30 port))
 	 (iinit (read-u30 port))
 	 (trait (read-list0 read-traits_info port)))
-    `((name (multiname ,name))
-      (super_name (multiname, super_name))
+    `((name ,name)
+      (super_name ,super_name)
       (flags ,flags)
       (protectedNs (namespace ,protectedNs))
       (interface ,(map (lambda (i) `(multiname ,i)) interface))
@@ -255,7 +255,7 @@
 ;;; traits_info reader
 
 (define (read-traits_info port)
-  (let* ((name (read-u30 port))
+  (let* ((name (read-id 'multiname port))
 	 (kind (read-u8 port))
 	 (trait-type (bitwise-and kind #b1111))
 	 (is-ATTR_Final    (positive? (bitwise-and kind #b00010000)))
@@ -269,7 +269,7 @@
 		       '())))
 ;    (if (zero? name) (error "traits_info.name cannot be zero") '())
     `((kind ,typename)
-      (name (multiname ,name))
+      (name ,name)
       ,@others
       (metadata ,metadata))))
   
@@ -287,11 +287,11 @@
 
 (define (read-trait_slot port)
   (let* ((slot_id (read-u30 port))
-	 (type_name (read-u30 port))
+	 (type_name (read-id 'multiname port))
 	 (vindex (read-u30 port))
 	 (vkind (if (= vindex 0) 0 (read-u8 port))))
   `((slot_id ,slot_id)
-    (type_name (multiname ,type_name))
+    (type_name ,type_name)
     (vindex ,vindex)
     (vkind ,vkind))))
 
@@ -318,9 +318,9 @@
 ;;; script_info reader
 
 (define (read-script_info port)
-  (let ((init (read-u30 port))
+  (let ((init (read-id 'method port))
 	(trait (read-list0 read-traits_info port)))
-    `((init (method ,init))
+    `((init ,init)
       (trait ,trait))))
 
 ;;; method_body_info reader
@@ -435,17 +435,20 @@
 			((eq? type 's24) (read-s24 port))
 			((eq? type 'u30) (read-u30 port))
 			((eq? type 'register) (read-u30 port))
-			((eq? type 'integer) `(integer ,(read-u30 port)))
-			((eq? type 'uinteger) `(uinteger ,(read-u30 port)))
-			((eq? type 'double) `(double ,(read-u30 port)))
-			((eq? type 'string) `(string ,(read-u30 port)))
-			((eq? type 'multiname) `(multiname ,(read-u30 port)))
-			((eq? type 'method) `(method ,(read-u30 port)))
+			((eq? type 'integer) (read-id 'integer port))
+			((eq? type 'uinteger) (read-id 'uinteger port))
+			((eq? type 'double) (read-id 'double port))
+			((eq? type 'string) (read-id 'string port))
+			((eq? type 'multiname) (read-id 'multiname port))
+			((eq? type 'method) (read-id 'method port))
 			(else (error (format "unknown param type ~a" type)))))
 		     types)))
       `(,pos ,opname ,@args))))
 
 ;;; Reader Utilities
+
+(define (read-id type port)
+  `(,type ,(read-u30 port)))
 
 ; Read entries by func. The count is the number of entries plus one.
 (define (read-list1 func port)
@@ -700,7 +703,7 @@
 	 (param_count (length param_type)))
     (write-u30 param_count port)
     (write-u30 (cadr (ref 'return_type x)) port)
-    (for-each (lambda (type) (write-u30 type port)) param_type) ;todo
+    (for-each (lambda (type) (write-id 'multiname type port)) param_type) ;todo
     (write-u30 (cadr (ref 'name x)) port)
     (write-u8 (ref 'flags x) port)
     (if (method-info-HAS_OPTIONAL (ref 'flags x)) (error "HAS_OPTIONAL is not supported yet") '()) ;todo
@@ -729,10 +732,10 @@
 	(metadata_count (if (null? (ref 'metadata x))
 			    0
 			    (error "metadata is not supported et"))))
-    (write-constant 'multiname (ref 'name x) port)
+    (write-id 'multiname (ref 'name x) port)
     (write-u8 Trait_Slot port)
     (write-u30 slot_id port)
-    (write-constant 'multiname type_name port)
+    (write-id 'multiname type_name port)
     (write-u30 0 port) ; vindex
     ))
 
@@ -854,14 +857,14 @@
 	       ((eq? type 'u8) (write-u8 arg port))
 	       ((eq? type 's24) (write-s24 arg port))
 	       ((eq? type 'u30) (write-u30 arg port))
-	       ((eq? type 'double) (write-constant type arg port))
-	       ((eq? type 'integer) (write-constant type arg port))
-	       ((eq? type 'method) (write-constant type arg port))
-	       ((eq? type 'multiname) (write-constant type arg port))
+	       ((eq? type 'double) (write-id type arg port))
+	       ((eq? type 'integer) (write-id type arg port))
+	       ((eq? type 'method) (write-id type arg port))
+	       ((eq? type 'multiname) (write-id type arg port))
 	       ((eq? type 'offset) (write-label arg src-labels port))
 	       ((eq? type 'register) (write-u30 arg port))
-	       ((eq? type 'string) (write-constant type arg port))
-	       ((eq? type 'uinteger) (write-constant type arg port))
+	       ((eq? type 'string) (write-id type arg port))
+	       ((eq? type 'uinteger) (write-id type arg port))
 	       (else (error (format "Unknown argument type: ~a" type)))
 	       ))
 	    spec args))
@@ -896,12 +899,12 @@
 	       ((eq? type 's24) (write-s24 arg port))
 	       ((eq? type 'u30) (write-u30 arg port))
 	       ((eq? type 'register) (write-u30 arg port))
-	       ((eq? type 'integer) (write-constant type arg port))
-	       ((eq? type 'uinteger) (write-constant type arg port))
-	       ((eq? type 'double) (write-constant type arg port))
-	       ((eq? type 'string) (write-constant type arg port))
-	       ((eq? type 'multiname) (write-constant type arg port))
-	       ((eq? type 'method) (write-constant type arg port))
+	       ((eq? type 'integer) (write-id type arg port))
+	       ((eq? type 'uinteger) (write-id type arg port))
+	       ((eq? type 'double) (write-id type arg port))
+	       ((eq? type 'string) (write-id type arg port))
+	       ((eq? type 'multiname) (write-id type arg port))
+	       ((eq? type 'method) (write-id type arg port))
 	       ((eq? type 'offset) (write-offset arg port))
 	       (else (error (format "Unknown argument type: ~a" type)))
 	       ))
@@ -912,7 +915,7 @@
     (write-s24 (- (cadr x) offset) port)))
 
 ;; Make sure if the type is correct and write the index.
-(define (write-constant type x port)
+(define (write-id type x port)
   (cond
    ((not (pair? x)) (error (format "Type error, expect: (~a i) given: ~a" type x)))
    ((eq? type (car x)) (write-u30 (cadr x) port))

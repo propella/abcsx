@@ -199,7 +199,7 @@
 ;;; Round trip of method_info
 (roundtrip-check write-method_info read-method_info
 		 '((return_type (multiname 0))
-		   (param_type ())
+		   (param_type ((multiname 1)))
 		   (name (string 1))
 		   (flags 0)
 		   (options ())
