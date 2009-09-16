@@ -2,7 +2,7 @@ import com.hurlant.eval.ByteLoader;
 
 private function read():void {
 	Global.console = output;
-	print("ready!\n");
+	print("\nOK.\n");
    
     var loader:URLLoader = new URLLoader();
     loader.dataFormat = URLLoaderDataFormat.BINARY;
