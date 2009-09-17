@@ -515,13 +515,17 @@
 
 (check (from-asm-make-hint
 	'((code
-	   ((0 getlocal 0)
-	    (2 pushscope)
-	    (3 findpropstrict ((ns_set 1) "print"))
-	    (5 pushstring "Hello, World!!")
-	    (7 callproperty ((package "") "print") 1)
-	    (10 returnvoid)))))
-       => '((max_stack 2) (local_count 1) (init_scope_depth 0) (max_scope_depth 1)))
+	   ((_ getlocal 0)
+	    (_ setlocal 1)
+	    (_ getlocal 2)
+	    (_ setlocal 3)
+	    (_ getlocal 0)
+	    (_ pushscope)
+	    (_ findpropstrict ((ns_set 1) "print"))
+	    (_ pushstring "Hello, World!!")
+	    (_ callproperty ((package "") "print") 1)
+	    (_ returnvoid)))))
+       => '((max_stack 2) (local_count 4) (init_scope_depth 0) (max_scope_depth 1)))
 
 ;; hello wolrd without hint
 (check

@@ -72,7 +72,7 @@
     (#x5f (finddef multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
     (#x61 (setproperty multiname) (stack -2)) ; FIXME: Doesn't consider runtime names
     (#x62 (getlocal register) (stack 1) (local (arg 0)))
-    (#x63 (setlocal register) (stack -1))
+    (#x63 (setlocal register) (stack -1) (local (arg 0)))
     (#x64 (getglobalscope) (stack 1))
     (#x65 (getscopeobject u8) (stack 1))
     (#x66 (getproperty multiname)) ; FIXME: Doesn't consider runtime names
