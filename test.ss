@@ -514,7 +514,14 @@
        => 4)
 
 (check (from-asm-make-hint
-	'((code
+	'((signature ((return_type (multiname 0)) (param_type (* *)) (name (string 2)) (flags 0) (options ()) (param_names ())))
+	  (code ())))
+       => '((max_stack 0) (local_count 3) (init_scope_depth 0) (max_scope_depth 0)))
+
+
+(check (from-asm-make-hint
+	'((signature ((return_type (multiname 0)) (param_type (* *)) (name (string 2)) (flags 0) (options ()) (param_names ())))
+	  (code
 	   ((_ getlocal 0)
 	    (_ setlocal 1)
 	    (_ getlocal 2)

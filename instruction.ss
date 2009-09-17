@@ -35,6 +35,7 @@
   '(
     (#x08 (kill register))
     (#x09 (label))
+    (#x0c (ifnlt offset))
     (#x10 (jump offset))
     (#x11 (iftrue offset) (stack -1))
     (#x12 (iffalse offset) (stack -1))
@@ -87,6 +88,8 @@
     (#x95 (typeof))
     (#x96 (not))
     (#xa0 (add) (stack -1))
+    (#xc5 (add_i) (stack -1))
+    (#xc6 (subtract_i) (stack -1))
     (#xa1 (subtract) (stack -1))
     (#xa3 (divide) (stack -1))
     (#xab (equals) (stack -1))

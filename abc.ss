@@ -1060,10 +1060,14 @@
 ;;; Visit code and extract the hint information from it.
 ;;; (hint ((max_stack ?) (local_count ?) (init_scope_depth 0) (max_scope_depth ?)))
 (define (from-asm-make-hint method)
-  (let ((hint (assoc 'hint method)))
+  (let* ((hint (assoc 'hint method))
+	 (signature (ref 'signature method #f))
+	 (local_count (if signature
+			  (length (ref 'param_type signature))
+			  0)))
     (if hint
 	(cadr hint)
-	(*from-asm-make-hint (ref 'code method) 0 0 0 0 0))))
+	(*from-asm-make-hint (ref 'code method) 0 0 local_count 0 0))))
 
 (define (*from-asm-make-hint lines stack max_stack local_count scope max_scope)
   (if (null? lines)
