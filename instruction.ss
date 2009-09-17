@@ -71,6 +71,7 @@
     (#x5d (findpropstrict multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
     (#x5e (findproperty multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
     (#x5f (finddef multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
+    (#x60 (getlex multiname) (stack 1))
     (#x61 (setproperty multiname) (stack -2)) ; FIXME: Doesn't consider runtime names
     (#x62 (getlocal register) (stack 1) (local (arg 0)))
     (#x63 (setlocal register) (stack -1) (local (arg 0)))
@@ -85,17 +86,18 @@
     (#x82 (coerce_a))
     (#x90 (negate))
     (#x91 (increment))
+    (#x93 (decrement))
     (#x95 (typeof))
     (#x96 (not))
     (#xa0 (add) (stack -1))
-    (#xc5 (add_i) (stack -1))
-    (#xc6 (subtract_i) (stack -1))
     (#xa1 (subtract) (stack -1))
     (#xa3 (divide) (stack -1))
     (#xab (equals) (stack -1))
     (#xac (strictequals) (stack -1))
     (#xad (lessthan) (stack -1))
     (#xb4 (in) (stack -1))
+    (#xc5 (add_i) (stack -1))
+    (#xc6 (subtract_i) (stack -1))
     (#xd0 (getlocal_0) (stack 1) (local 0))
     (#xd1 (getlocal_1) (stack 1) (local 1))
     (#xd2 (getlocal_2) (stack 1) (local 2))
