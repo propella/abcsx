@@ -23,8 +23,10 @@
 #lang scheme
 (require srfi/78) ; Lightweight testing
 
-(require "abc.ss")
-(require "instruction.ss")
+;(require "abc.ss")
+;(require "instruction.ss")
+(include "instruction.ss")
+(include "abc.ss")
 
 (check-set-mode! 'report-failed)
 

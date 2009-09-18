@@ -29,12 +29,6 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
-#lang scheme
-
-(require "instruction.ss")
-
-(provide (all-defined-out))
-
 ;;;;;;;;;; The main public reader and writer ;;;;;;;;;;
 
 ;; De-serialize binary stream to ASM form
