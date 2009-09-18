@@ -2,8 +2,8 @@
 ;; ./asm.ss filename.sx
 
 #lang scheme
-(include "instruction.ss")
-(include "abc.ss")
+(include "instruction.k")
+(include "abc.k")
 
 ;;; read a S-expression file
 (define (read-file infile)

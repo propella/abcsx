@@ -7,8 +7,8 @@
 ;; ./dump.ss -abc filename.abc
 
 #lang scheme
-(include "instruction.ss")
-(include "abc.ss")
+(include "instruction.k")
+(include "abc.k")
 
 (define (print-abc-file infile is-abc)
   (call-with-input-file infile

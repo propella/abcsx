@@ -25,8 +25,8 @@
 
 ;(require "abc.ss")
 ;(require "instruction.ss")
-(include "instruction.ss")
-(include "abc.ss")
+(include "instruction.k")
+(include "abc.k")
 
 (check-set-mode! 'report-failed)
 
