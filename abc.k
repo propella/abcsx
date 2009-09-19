@@ -29,65 +29,103 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
-;;;;;;;;;; The main public reader and writer ;;;;;;;;;;
-
-;; De-serialize binary stream to ASM form
-(define read-asm (lambda (port)
-  (to-asm (read-abc port))))
-
-;; Serialize ASM or ABC form to binary stream
-;; If (car expr) is 'abc, the form is abc.
-(define write-asm (lambda (form port)
-  (let ((abc (cond
-	      ((eq? (car form) 'asm) (from-asm form))
-	      ((eq? (car form) 'abc) form)
-	      (else (error (format "This is not ABC nor ASM form: ~a" form))))))
-    (write-abc abc port))))
-
 ;;;;;;;;;; ABC Form Reader ;;;;;;;;;;
 
-;;; abcFile reader
+;;;; Primitive Data Types Reader
 
-(define read-abc (lambda (port)
-  (let* ((minor_version (read-u16 port))
-	 (major_version (read-u16 port))
-	 (constant_pool (read-cpool_info port))
-	 (method (read-list0 read-method_info port))
-	 (metadata (read-list0 read-metadata_info port))
-	 (class_count (read-u30 port))
-	 (instance (build-list class_count (lambda (_) (read-instance_info port))))
-	 (class (build-list class_count (lambda (_) (read-class_info port))))
-	 (script (read-list0 read-script_info port))
-	 (method_body (read-list0 read-method_body_info port))
-	 )
-    `(abc
-      (minor_version ,minor_version)
-      (major_version ,major_version)
-      (constant_pool ,constant_pool)
-      (method ,method)
-      (metadata ,metadata)
-      (instance ,instance)
-      (class ,class)
-      (script ,script)
-      (method_body ,method_body)))))
+(define read-u8 read-byte)
 
-;;; cpool reader
+;; Two-byte unsigned integer value
+(define read-u16 (lambda (port)
+  (let ((l (read-byte port))
+	(h (read-byte port)))
+    (+ (* h 256) l))))
 
-(define read-cpool_info (lambda (port)
-  (let* ((integers (read-list1 read-s32 port))
-	 (uintegers (read-list1 read-u32 port))
-	 (doubles (read-list1 read-d64 port))
-	 (strings (read-list1 read-string_info port))
-	 (namespaces (read-list1 read-namespace_info port))
-	 (ns_sets (read-list1 read-ns_set_info port))
-	 (multinames (read-list1 read-multiname_info port)))
-    `((integer ,integers)
-      (uinteger ,uintegers)
-      (double ,doubles)
-      (string ,strings)
-      (namespace ,namespaces)
-      (ns_set ,ns_sets)
-      (multiname ,multinames)))))
+;; Variale number integer
+(define read-u32 (lambda (port)
+  (let ((a (read-byte port)))
+    (if (< a 128) a
+	(let ((a (bitwise-and a #x7f))
+	      (b (read-byte port)))
+	  (if (< b 128) (+ (arithmetic-shift b 7) a)
+	      (let ((b (bitwise-and b #x7f))
+		    (c  (read-byte port)))
+		(if (< c 128) (+ (arithmetic-shift c 14) (arithmetic-shift b 7) a)
+		    (let ((c (bitwise-and c #x7f))
+			  (d  (read-byte port)))
+		      (if (< d 128) (+ (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a)
+			  (let ((d (bitwise-and d #x7f))
+				(e  (bitwise-and (read-byte port) #x0f)))
+			    (+ (arithmetic-shift e 28) (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a))))))))))))
+
+(define read-u30 (lambda (port) ;; todo
+    (read-u32 port)))
+
+(define read-s24 (lambda (port)
+  (let ((b0 (read-byte port))
+	(b1 (read-byte port))
+	(b2 (read-byte port)))
+    (if (positive? (bitwise-and b2 #b10000000))
+	(+ (* b2 #x10000) (* b1 #x100) b0 #x-1000000)
+	(+ (* b2 #x10000) (* b1 #x100) b0)))))
+
+(define read-s32 (lambda (port)
+    (let ((u32 (read-u32 port)))
+      (if (< u32 #x80000000)
+	  u32
+	  (- u32 #x100000000)))))
+
+;; 8-byte IEEE-754 floating point value.
+(define read-d64 (lambda (port)
+  (let ((bx (read-bytes 8 port)))
+    (floating-point-bytes->real bx #f))))
+
+(define read-id (lambda (type port)
+  `(,type ,(read-u30 port))))
+
+;;;; List Reader
+
+;; Read entries by func. The count is the number of entries plus one.
+(define read-list1 (lambda (func port)
+  (let ((count (read-u30 port)))
+    (if (= count 0)
+	'()
+	(build-list (- count 1) (lambda (_) (func port)))))))
+
+;; Read entries by func. The count is the number of entries.
+(define read-list0 (lambda (func port)
+  (let ((count (read-u30 port)))
+    (build-list count (lambda (_) (func port))))))
+
+;;;; Constant Pool Reader
+
+;;; string_info reader
+
+(define read-string_info (lambda (port)
+  (let ((size (read-u30 port)))
+    (bytes->string/utf-8 (read-bytes size port)))))
+
+;;; namespace_info reader
+
+(define CONSTANT_Namespace
+  '((#x08 . ns)
+   (#x16 . package)
+   (#x17 . internal)
+   (#x18 . protected)
+   (#x19 . explicit)
+   (#x1a . static)
+   (#x05 . private)))
+
+(define read-namespace_info (lambda (port)
+  (let ((kind (read-u8 port))
+	(name (read-id 'string port)))
+    `(,(cdr (assoc kind CONSTANT_Namespace)) ,name))))
+
+;;; ns_set_info reader
+
+(define read-ns_set_info (lambda (port)
+  (cons 'ns_set
+	(read-list0 (lambda (p) (read-id 'namespace p)) port))))
 
 ;;; multiname_info reader
 
@@ -101,21 +139,6 @@
 (define CONSTANT_MultinameA #x0E)
 (define CONSTANT_MultinameL #x1B)
 (define CONSTANT_MultinameLA #x1C)
-
-(define read-multiname_info (lambda (port)
-  (let ((kind (read-u8 port)))
-    (cond
-     ((= kind CONSTANT_QName) (read-multiname_kind_QName port))
-     ((= kind CONSTANT_QNameA) (multiname-attribute (read-multiname_kind_QName port)))
-     ((= kind CONSTANT_RTQName) (read-multiname_kind_RTQName port))
-     ((= kind CONSTANT_RTQNameA) (multiname-attribute (read-multiname_kind_RTQName port)))
-     ((= kind CONSTANT_RTQNameL) (read-multiname_kind_RTQNameL port))
-     ((= kind CONSTANT_RTQNameLA) (multiname-attribute (read-multiname_kind_RTQNameL port)))
-     ((= kind CONSTANT_Multiname) (read-multiname_kind_Multiname port))
-     ((= kind CONSTANT_MultinameA) (multiname-attribute (read-multiname_kind_Multiname port)))
-     ((= kind CONSTANT_MultinameL) (read-multiname_kind_MultinameL port))
-     ((= kind CONSTANT_MultinameLA) (multiname-attribute (read-multiname_kind_MultinameL port)))
-     ))))
 
 (define multiname-attribute (lambda (x)
   `(attribute ,x)))
@@ -138,42 +161,62 @@
 (define read-multiname_kind_MultinameL (lambda (port)
   `(ns_set ,(read-u30 port))))
 
-;; CONSTANT_Namespace 0x08 
-;; CONSTANT_PackageNamespace 0x16 
-;; CONSTANT_PackageInternalNs 0x17 
-;; CONSTANT_ProtectedNamespace 0x18 
-;; CONSTANT_ExplicitNamespace 0x19 
-;; CONSTANT_StaticProtectedNs 0x1A 
-;; CONSTANT_PrivateNs 0x05 
-
 (define transpose (lambda (dict)
   (map (lambda (pair) (cons (cdr pair) (car pair))) dict)))
 
-(define CONSTANT_Namespace
-  '((#x08 . ns)
-   (#x16 . package)
-   (#x17 . internal)
-   (#x18 . protected)
-   (#x19 . explicit)
-   (#x1a . static)
-   (#x05 . private)))
-
 (define CONSTANT_Namespace_write (transpose CONSTANT_Namespace))
 
-;;; namespace_info reader
+(define read-multiname_info (lambda (port)
+  (let ((kind (read-u8 port)))
+    (cond
+     ((= kind CONSTANT_QName) (read-multiname_kind_QName port))
+     ((= kind CONSTANT_QNameA) (multiname-attribute (read-multiname_kind_QName port)))
+     ((= kind CONSTANT_RTQName) (read-multiname_kind_RTQName port))
+     ((= kind CONSTANT_RTQNameA) (multiname-attribute (read-multiname_kind_RTQName port)))
+     ((= kind CONSTANT_RTQNameL) (read-multiname_kind_RTQNameL port))
+     ((= kind CONSTANT_RTQNameLA) (multiname-attribute (read-multiname_kind_RTQNameL port)))
+     ((= kind CONSTANT_Multiname) (read-multiname_kind_Multiname port))
+     ((= kind CONSTANT_MultinameA) (multiname-attribute (read-multiname_kind_Multiname port)))
+     ((= kind CONSTANT_MultinameL) (read-multiname_kind_MultinameL port))
+     ((= kind CONSTANT_MultinameLA) (multiname-attribute (read-multiname_kind_MultinameL port)))
+     ))))
 
-(define read-namespace_info (lambda (port)
-  (let ((kind (read-u8 port))
-	(name (read-id 'string port)))
-    `(,(cdr (assoc kind CONSTANT_Namespace)) ,name))))
+;;; cpool reader
 
-;;; ns_set_info reader
-
-(define read-ns_set_info (lambda (port)
-  (cons 'ns_set
-	(read-list0 (lambda (p) (read-id 'namespace p)) port))))
+(define read-cpool_info (lambda (port)
+  (let* ((integers (read-list1 read-s32 port))
+	 (uintegers (read-list1 read-u32 port))
+	 (doubles (read-list1 read-d64 port))
+	 (strings (read-list1 read-string_info port))
+	 (namespaces (read-list1 read-namespace_info port))
+	 (ns_sets (read-list1 read-ns_set_info port))
+	 (multinames (read-list1 read-multiname_info port)))
+    `((integer ,integers)
+      (uinteger ,uintegers)
+      (double ,doubles)
+      (string ,strings)
+      (namespace ,namespaces)
+      (ns_set ,ns_sets)
+      (multiname ,multinames)))))
 
 ;;; method_info reader
+
+(define	method-info-NEED_ARGUMENTS  (lambda (flags) (positive? (bitwise-and flags #x01))))
+(define	method-info-NEED_ACTIVATION (lambda (flags) (positive? (bitwise-and flags #x02))))
+(define	method-info-NEED_REST       (lambda (flags) (positive? (bitwise-and flags #x04))))
+(define	method-info-HAS_OPTIONAL    (lambda (flags) (positive? (bitwise-and flags #x08))))
+(define	method-info-SET_DXNS        (lambda (flags) (positive? (bitwise-and flags #x40))))
+(define	method-info-HAS_PARAM_NAMES (lambda (flags) (positive? (bitwise-and flags #x80))))
+
+(define read-option_detail (lambda (port) ; todo
+  `((val ,(read-u30 port))
+    (kind ,(read-u8 port)))))
+
+(define read-option_info (lambda (port)
+  (read-list0 read-option_detail port)))
+
+(define read-param_info (lambda (param_count port)
+  (build-list param_count (lambda (_) (read-u30 port)))))
 
 (define read-method_info (lambda (port)
   (let* ((param_count (read-u30 port))
@@ -190,28 +233,18 @@
       (flags ,flags)
       (options ,options)
       (param_names ,param_names)))))
-
-(define read-option_info (lambda (port)
-  (read-list0 read-option_detail port)))
-
-(define read-option_detail (lambda (port) ; todo
-  `((val ,(read-u30 port))
-    (kind ,(read-u8 port)))))
-
-(define read-param_info (lambda (param_count port)
-  (build-list param_count (lambda (_) (read-u30 port)))))
   
 ;;; metadata_info reader
-
-(define read-metadata_info (lambda (port)
-  `((name (string ,(read-u30 port)))
-    (items ,(read-list0 read-item_info port)))))
 
 (define read-item_info (lambda (port)
   `((key ,(read-id 'string port))
     (value ,(read-id 'string port)))))
 
-;;; instance_info reader
+(define read-metadata_info (lambda (port)
+  `((name (string ,(read-u30 port)))
+    (items ,(read-list0 read-item_info port)))))
+
+;;; traits_info reader
 
 (define Trait_Slot 0)
 (define Trait_Method 1)
@@ -220,6 +253,61 @@
 (define Trait_Class 4)
 (define Trait_Function 5)
 (define Trait_Const 6)
+
+(define read-trait_slot (lambda (port)
+  (let* ((slot_id (read-u30 port))
+	 (type_name (read-id 'multiname port))
+	 (vindex (read-u30 port))
+	 (vkind (if (= vindex 0) 0 (read-u8 port))))
+  `((slot_id ,slot_id)
+    (type_name ,type_name)
+    (vindex ,vindex)
+    (vkind ,vkind)))))
+
+(define read-trait_class (lambda (port)
+  `((slot_id ,(read-u30 port))
+    (classi (class ,(read-u30 port))))))
+
+(define read-trait_function (lambda (port)
+  `((slot_id ,(read-u30 port))
+    (function ,(read-u30 port)))))
+
+(define read-trait_method (lambda (port)
+  `((disp_id ,(read-u30 port))
+    (method ,(read-u30 port)))))
+  
+(define read-traits_info_data (lambda (name kind port)
+  (cond
+   ((= kind Trait_Slot) `(slot . ,(read-trait_slot port)))
+   ((= kind Trait_Method) `(method . ,(read-trait_method port)))
+   ((= kind Trait_Getter) `(getter . ,(read-trait_method port)))
+   ((= kind Trait_Setter) `(setter . ,(read-trait_method port)))
+   ((= kind Trait_Class) `(class . ,(read-trait_class port)))
+   ((= kind Trait_Function) `(function . ,(read-trait_function port)))
+   ((= kind Trait_Const) `(const ,(read-trait_slot port)))
+   (else (error (format "Unknown trait type ~a" kind)))
+)))
+
+(define read-traits_info (lambda (port)
+  (let* ((name (read-id 'multiname port))
+	 (kind (read-u8 port))
+	 (trait-type (bitwise-and kind #b1111))
+	 (is-ATTR_Final    (positive? (bitwise-and kind #b00010000)))
+	 (is-ATTR_Override (positive? (bitwise-and kind #b00100000)))
+	 (is-ATTR_Metadata (positive? (bitwise-and kind #b01000000)))
+	 (data (read-traits_info_data name trait-type port))
+	 (typename (car data))
+	 (others (cdr data))
+	 (metadata (if is-ATTR_Metadata
+		       (read-list0 read-u30 port)
+		       '())))
+;    (if (zero? name) (error "traits_info.name cannot be zero") '())
+    `((kind ,typename)
+      (name ,name)
+      ,@others
+      (metadata ,metadata)))))
+
+;;; instance_info reader
 
 (define CONSTANT_ClassSealed #x01)
 (define CONSTANT_ClassFinal #x02)
@@ -246,61 +334,6 @@
       (trait ,trait)
       ))))
 
-;;; traits_info reader
-
-(define read-traits_info (lambda (port)
-  (let* ((name (read-id 'multiname port))
-	 (kind (read-u8 port))
-	 (trait-type (bitwise-and kind #b1111))
-	 (is-ATTR_Final    (positive? (bitwise-and kind #b00010000)))
-	 (is-ATTR_Override (positive? (bitwise-and kind #b00100000)))
-	 (is-ATTR_Metadata (positive? (bitwise-and kind #b01000000)))
-	 (data (read-traits_info_data name trait-type port))
-	 (typename (car data))
-	 (others (cdr data))
-	 (metadata (if is-ATTR_Metadata
-		       (read-list0 read-u30 port)
-		       '())))
-;    (if (zero? name) (error "traits_info.name cannot be zero") '())
-    `((kind ,typename)
-      (name ,name)
-      ,@others
-      (metadata ,metadata)))))
-  
-(define read-traits_info_data (lambda (name kind port)
-  (cond
-   ((= kind Trait_Slot) `(slot . ,(read-trait_slot port)))
-   ((= kind Trait_Method) `(method . ,(read-trait_method port)))
-   ((= kind Trait_Getter) `(getter . ,(read-trait_method port)))
-   ((= kind Trait_Setter) `(setter . ,(read-trait_method port)))
-   ((= kind Trait_Class) `(class . ,(read-trait_class port)))
-   ((= kind Trait_Function) `(function . ,(read-trait_function port)))
-   ((= kind Trait_Const) `(const ,(read-trait_slot port)))
-   (else (error (format "Unknown trait type ~a" kind)))
-)))
-
-(define read-trait_slot (lambda (port)
-  (let* ((slot_id (read-u30 port))
-	 (type_name (read-id 'multiname port))
-	 (vindex (read-u30 port))
-	 (vkind (if (= vindex 0) 0 (read-u8 port))))
-  `((slot_id ,slot_id)
-    (type_name ,type_name)
-    (vindex ,vindex)
-    (vkind ,vkind)))))
-
-(define read-trait_class (lambda (port)
-  `((slot_id ,(read-u30 port))
-    (classi (class ,(read-u30 port))))))
-
-(define read-trait_function (lambda (port)
-  `((slot_id ,(read-u30 port))
-    (function ,(read-u30 port)))))
-
-(define read-trait_method (lambda (port)
-  `((disp_id ,(read-u30 port))
-    (method ,(read-u30 port)))))
-
 ;;; class_info reader
 
 (define read-class_info (lambda (port)
@@ -317,44 +350,21 @@
     `((init ,init)
       (trait ,trait)))))
 
-;;; method_body_info reader
-
-(define read-method_body_info (lambda (port)
-  (let* ((method (read-u30 port))
-	(max_stack (read-u30 port))
-	(local_count (read-u30 port))
-	(init_scope_depth (read-u30 port))
-	(max_scope_depth (read-u30 port))
-	(code_length (read-u30 port))
-	(code (read-bytes code_length port))
-	(exception (read-list0 read-exception_info port))
-	(trait (read-list0 read-traits_info port)))
-    `((method ,method)
-      (max_stack ,max_stack)
-      (local_count ,local_count)
-      (init_scope_depth ,init_scope_depth)
-      (max_scope_depth ,max_scope_depth)
-      (code ,(decode-instructions code))
-      (exception ,exception)
-      (trait ,trait)))))
-
-(define read-exception_info (lambda (port)
-  `((from ,(read-u30 port))
-    (to ,(read-u30 port))
-    (target ,(read-u30 port))
-    (exc_type (string ,(read-u30 port)))
-    (var_name (string ,(read-u30 port))))))
-
 ;;; code reader
 
-(define decode-instructions (lambda (code)
-  (let ((code-port (open-input-bytes code)))
-    (read-instructions code-port))))
+;; make a label from label symbol list and offset.
+(define label-from-list (lambda (destination labels)
+  (let ((found (memq destination labels)))
+    (if found
+	(string->symbol (string-append "L" (number->string (length found))))
+	#f))))
 
-(define read-instructions (lambda (port)
-  (let* ((code (reverse (read-instruction '() port)))
-	 (labels (find-label code)))
-    (insert-label code labels))))
+(define destination-from-args (lambda (xs)
+  (if (and (not (null? xs))
+	   (pair? (car xs))
+	   (eq? (car (car xs)) 'offset))
+      (cadr (car xs))
+      #f)))
 
 ;; Extract and insert jump labels
 (define insert-label (lambda (code labels)
@@ -375,25 +385,12 @@
 	    more))
 )))
 
-(define destination-from-args (lambda (xs)
-  (if (and (not (null? xs))
-	   (pair? (car xs))
-	   (eq? (car (car xs)) 'offset))
-      (cadr (car xs))
-      #f)))
+;; label
 
-;; make a label from label list and offset.
-(define label-from-list (lambda (destination labels)
-  (let ((found (memq destination labels)))
-    (if found
-	(string->symbol (string-append "L" (number->string (length found))))
-	#f))))
-
-;; Return all jump addreses in reverse order
-;; The result numbers are used for label index. For example,
-;; 3 in (3 4 5) is L2 because 3 is the third in reverse order.
-(define find-label (lambda (code)
-  (foldl *find-label '() code)))
+(define find-label-new (lambda (pos labels)
+  (if (memq pos labels)
+      labels
+      (cons pos labels))))
 
 (define *find-label (lambda (line labels)
   (let* ((args (cddr line))
@@ -402,21 +399,13 @@
 	(find-label-new offset labels)
 	labels))))
 
-(define find-label-new (lambda (pos labels)
-  (if (memq pos labels)
-      labels
-      (cons pos labels))))
-;;
+;; Return all jump addreses in reverse order
+;; The result numbers are used for label index. For example,
+;; 3 in (3 4 5) is L2 because 3 is the third in reverse order.
+(define find-label (lambda (code)
+  (foldl *find-label '() code)))
 
-(define read-instruction (lambda (decoded port)
-  (let ((pos (file-position port))
-	(inst (read-byte port)))
-    (if (eof-object? inst)
-	decoded
-	(let ((spec (hash-ref read-instruction-map inst)))
-	  (read-instruction
-;	   (cons (dprint (read-arguments spec pos port)) decoded) port)))))
-	   (cons (read-arguments spec pos port) decoded) port))))))
+;; instruction reader
 
 (define read-arguments (lambda (spec pos port)
   (let ((opname (car spec))
@@ -439,101 +428,81 @@
 		     types)))
       `(,pos ,opname ,@args)))))
 
-;;; Reader Utilities
+(define read-instruction (lambda (decoded port)
+  (let ((pos (file-position port))
+	(inst (read-byte port)))
+    (if (eof-object? inst)
+	decoded
+	(let ((spec (hash-ref read-instruction-map inst)))
+	  (read-instruction
+;	   (cons (dprint (read-arguments spec pos port)) decoded) port)))))
+	   (cons (read-arguments spec pos port) decoded) port))))))
 
-(define read-id (lambda (type port)
-  `(,type ,(read-u30 port))))
+(define read-instructions (lambda (port)
+  (let* ((code (reverse (read-instruction '() port)))
+	 (labels (find-label code)))
+    (insert-label code labels))))
 
-; Read entries by func. The count is the number of entries plus one.
-(define read-list1 (lambda (func port)
-  (let ((count (read-u30 port)))
-    (if (= count 0)
-	'()
-	(build-list (- count 1) (lambda (_) (func port)))))))
+(define decode-instructions (lambda (code)
+  (let ((code-port (open-input-bytes code)))
+    (read-instructions code-port))))
 
-; Read entries by func. The count is the number of entries.
-(define read-list0 (lambda (func port)
-  (let ((count (read-u30 port)))
-    (build-list count (lambda (_) (func port))))))
+(define read-exception_info (lambda (port)
+  `((from ,(read-u30 port))
+    (to ,(read-u30 port))
+    (target ,(read-u30 port))
+    (exc_type (string ,(read-u30 port)))
+    (var_name (string ,(read-u30 port))))))
 
-;;; Primitive Data Types Readers
+;;; method_body_info reader
 
-(define read-u8 (lambda (port)
-  (read-byte port)))
+(define read-method_body_info (lambda (port)
+  (let* ((method (read-u30 port))
+	(max_stack (read-u30 port))
+	(local_count (read-u30 port))
+	(init_scope_depth (read-u30 port))
+	(max_scope_depth (read-u30 port))
+	(code_length (read-u30 port))
+	(code (read-bytes code_length port))
+	(exception (read-list0 read-exception_info port))
+	(trait (read-list0 read-traits_info port)))
+    `((method ,method)
+      (max_stack ,max_stack)
+      (local_count ,local_count)
+      (init_scope_depth ,init_scope_depth)
+      (max_scope_depth ,max_scope_depth)
+      (code ,(decode-instructions code))
+      (exception ,exception)
+      (trait ,trait)))))
 
-; Two-byte unsigned integer value.  
-(define read-u16 (lambda (port)
-  (let ((l (read-byte port))
-	(h (read-byte port)))
-    (+ (* h 256) l))))
+;;; abcFile reader
 
-(define read-u30 (lambda (port) ;; todo
-    (read-u32 port)))
-
-(define read-s24 (lambda (port)
-  (let ((b0 (read-byte port))
-	(b1 (read-byte port))
-	(b2 (read-byte port)))
-    (if (positive? (bitwise-and b2 #b10000000))
-	(+ (* b2 #x10000) (* b1 #x100) b0 #x-1000000)
-	(+ (* b2 #x10000) (* b1 #x100) b0)))))
-
-(define read-s32 (lambda (port)
-    (let ((u32 (read-u32 port)))
-      (if (< u32 #x80000000)
-	  u32
-	  (- u32 #x100000000)))))
-
-; 8-byte IEEE-754 floating point value.
-(define read-d64 (lambda (port)
-  (let ((bx (read-bytes 8 port)))
-    (floating-point-bytes->real bx #f))))
-
-(define read-string_info (lambda (port)
-  (let ((size (read-u30 port)))
-    (bytes->string/utf-8 (read-bytes size port)))))
-
-(define read-u32 (lambda (port)
-  (let ((a (read-byte port)))
-    (if (< a 128) a
-	(let ((a (bitwise-and a #x7f))
-	      (b (read-byte port)))
-	  (if (< b 128) (+ (arithmetic-shift b 7) a)
-	      (let ((b (bitwise-and b #x7f))
-		    (c  (read-byte port)))
-		(if (< c 128) (+ (arithmetic-shift c 14) (arithmetic-shift b 7) a)
-		    (let ((c (bitwise-and c #x7f))
-			  (d  (read-byte port)))
-		      (if (< d 128) (+ (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a)
-			  (let ((d (bitwise-and d #x7f))
-				(e  (bitwise-and (read-byte port) #x0f)))
-			    (+ (arithmetic-shift e 28) (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a))))))))))))
+(define read-abc (lambda (port)
+  (let* ((minor_version (read-u16 port))
+	 (major_version (read-u16 port))
+	 (constant_pool (read-cpool_info port))
+	 (method (read-list0 read-method_info port))
+	 (metadata (read-list0 read-metadata_info port))
+	 (class_count (read-u30 port))
+	 (instance (build-list class_count (lambda (_) (read-instance_info port))))
+	 (class (build-list class_count (lambda (_) (read-class_info port))))
+	 (script (read-list0 read-script_info port))
+	 (method_body (read-list0 read-method_body_info port))
+	 )
+    `(abc
+      (minor_version ,minor_version)
+      (major_version ,major_version)
+      (constant_pool ,constant_pool)
+      (method ,method)
+      (metadata ,metadata)
+      (instance ,instance)
+      (class ,class)
+      (script ,script)
+      (method_body ,method_body)))))
 
 ;;;;;;;;;; ASM Form Decoder ;;;;;;;;;;
 
-(define to-asm (lambda (abc)
-  (let* ((*abc (set-method-body (cdr abc)))
-	 (**abc (decode-id *abc *abc))
-	 (cpool (assoc 'constant_pool **abc))
-	 (ns_set (assoc 'ns_set (cadr cpool)))
-	 (method (assoc 'method **abc))
-	 (instance (assoc 'instance **abc))
-	 (class (assoc 'class **abc))
-	 (script (assoc 'script **abc)))
-    (list 'asm ns_set method instance class script))))
-
 ;;; ASM form
-
-; For some reason, a method_body refers a method instead of the other way.
-; So I have to make reverse reference by my hand.
-(define set-method-body (lambda (abc)
-  (let* ((method (assoc 'method abc))
-	 (method-bodies (cadr (assoc 'method_body abc)))
-	 (methods (make-method-body-reference (cadr method) method-bodies 0)))
-    (map (lambda (tag)
-	   (if (eq? (car tag) 'method) `(method ,methods)
-	       tag))
-	 abc))))
 
 (define make-method-body-reference (lambda (methods method-bodies index)
   (if (null? methods)
@@ -558,6 +527,31 @@
 		       ,exception)))
 	(cons method
 	      (make-method-body-reference (cdr methods) method-bodies (+ index 1)))))))
+
+; For some reason, a method_body refers a method instead of the other way.
+; So I have to make reverse reference by my hand.
+(define set-method-body (lambda (abc)
+  (let* ((method (assoc 'method abc))
+	 (method-bodies (cadr (assoc 'method_body abc)))
+	 (methods (make-method-body-reference (cadr method) method-bodies 0)))
+    (map (lambda (tag)
+	   (if (eq? (car tag) 'method) `(method ,methods)
+	       tag))
+	 abc))))
+
+; find one-base index from the constant pool
+(define find-constant (lambda (type id default abc)
+  (let* ((pool (cadr (assoc 'constant_pool abc)))
+	 (table (cadr (assoc type pool))))
+    (if (zero? id)
+	default
+	(decode-id (list-ref table (- id 1)) abc)))))
+
+(define constant-id? (lambda (e)
+  (and (pair? e)
+       (symbol? (car e))
+       (pair? (cdr e))
+       (number? (cadr e)))))
   
 ;;; Convert index expression to the literal
 ;;; (string 1) => "hello"
@@ -579,68 +573,121 @@
 	  (cons (decode-id (car e) abc) (decode-id (cdr e) abc)))
       e)))
 
-(define constant-id? (lambda (e)
-  (and (pair? e)
-       (symbol? (car e))
-       (pair? (cdr e))
-       (number? (cadr e)))))
-
-; find one-base index from the constant pool
-(define find-constant (lambda (type id default abc)
-  (let* ((pool (cadr (assoc 'constant_pool abc)))
-	 (table (cadr (assoc type pool))))
-    (if (zero? id)
-	default
-	(decode-id (list-ref table (- id 1)) abc)))))
-
 ; find zero-base index from a body
 (define find-element (lambda (type id abc)
   (let* ((pool abc)
 	 (table (cadr (assoc type pool))))
     (decode-id (list-ref table id) abc))))
 
+(define to-asm (lambda (abc)
+  (let* ((*abc (set-method-body (cdr abc)))
+	 (**abc (decode-id *abc *abc))
+	 (cpool (assoc 'constant_pool **abc))
+	 (ns_set (assoc 'ns_set (cadr cpool)))
+	 (method (assoc 'method **abc))
+	 (instance (assoc 'instance **abc))
+	 (class (assoc 'class **abc))
+	 (script (assoc 'script **abc)))
+    (list 'asm ns_set method instance class script))))
+
 ;;;;;;;;;; ABC Form Writer ;;;;;;;;;;
 
-;;; abcFile writer
+;;; Primitive Data Writer
 
-(define write-abc (lambda (abc port)
-  (if (not (eq? (car abc) 'abc)) (error (format "This is not a ABC form: ~a" abc)) '())
-  (let* ((*abc (cdr abc))
-	 (instance (ref 'instance *abc))
-	 (class_count (length instance)))
-    (write-u16 16 port)
-    (write-u16 46 port)
-    (write-cpool_info (cadr (assoc 'constant_pool *abc)) port)
-    (write-list0 write-method_info (ref 'method *abc) port)
-    (write-list0 write-metadata_info (ref 'metadata *abc) port)
-    (write-u30 class_count port)
-    (for-each (lambda (each) (write-instance_info each port)) instance)
-    (for-each (lambda (each) (write-class_info each port)) (ref 'class *abc))
-    (write-list0 write-script_info (ref 'script *abc) port)
-    (write-list0 write-method_body_info (ref 'method_body *abc) port)
-)))
+(define write-u8 write-byte)
+
+(define write-s24 (lambda (i port)
+  (let* ((i0 (if (positive? i)
+		 i
+		 (+ i #x1000000)))
+	 (b0 (bitwise-and i0 #xff))
+	 (b1 (bitwise-and (arithmetic-shift i0 -8) #xff))
+	 (b2 (bitwise-and (arithmetic-shift i0 -16) #xff)))
+    (write-byte b0 port)
+    (write-byte b1 port)
+    (write-byte b2 port))))
+
+(define write-d64 (lambda (e port)
+  (write-bytes (real->floating-point-bytes e 8 #f) port)))
+
+(define write-u32 (lambda (i port)
+  (let ((e (bitwise-and (arithmetic-shift i -28) #x7f))
+	(d (bitwise-and (arithmetic-shift i -21) #x7f))
+	(c (bitwise-and (arithmetic-shift i -14) #x7f))
+	(b (bitwise-and (arithmetic-shift i  -7) #x7f))
+	(a (bitwise-and i #x7f)))
+    (if (or (positive? b) (positive? c) (positive? d) (positive? e))
+	(begin (write-byte (bitwise-ior a #x80) port)
+	       (if (or (positive? c) (positive? d) (positive? e))
+		   (begin (write-byte (bitwise-ior b #x80) port)
+			  (if (or (positive? d) (positive? e))
+			      (begin (write-byte (bitwise-ior c #x80) port)
+				     (if (positive? e)
+					 (begin (write-byte (bitwise-ior d #x80) port)
+						(write-byte e port))
+					 (write-byte d port)))
+			      (write-byte c port)))
+		   (write-byte b port)))
+	(write-byte a port)))))
+
+(define write-u16 (lambda (i port)
+  (let ((b0 (bitwise-and #xff i))
+	(b1 (arithmetic-shift i -8)))
+    (write-byte b0 port)
+    (write-byte b1 port))))
+
+(define write-s32 (lambda (i port)
+  (write-u32
+   (if (negative? i)
+       (+ i #x100000000)
+       i) port)))
+
+(define write-u30 (lambda (i port)
+  (write-u32 i port)))
+
+
+;; Make sure if the type is correct and write the index.
+(define write-id (lambda (type x port)
+  (cond
+   ((not (pair? x)) (error (format "Type error, expect: (~a i) given: ~a" type x)))
+   ((eq? type (car x)) (write-u30 (cadr x) port))
+   (else (error (format "Type error, expect: (~a i) given: ~a" type x))))))
+
+;;; List Writer
+
+; todo: in case of #f (entry is none)
+; Write entries (xs) by func. The count is the number of entries plus one.
+; func is an output function as (func object port)
+(define write-list1 (lambda (func xs port)
+  (if xs
+      (let ((n (add1 (length xs))))
+	(write-u30 n port)
+	(for-each (lambda (x) (func x port)) xs))
+      '())))
+
+(define write-list0 (lambda (func xs port)
+  (if xs
+      (let ((n (length xs)))
+	(write-u30 n port)
+	(for-each (lambda (x) (func x port)) xs))
+      '())))
 
 ;;; cpool_info writer
 
-(define write-cpool_info (lambda (x port)
-  (write-list1 write-s32 (cadr (assoc 'integer x)) port)
-  (write-list1 write-u32 (cadr (assoc 'uinteger x)) port)
-  (write-list1 write-d64 (cadr (assoc 'double x)) port)
-  (write-list1 write-string_info (cadr (assoc 'string x)) port)
-  (write-list1 write-namespace_info (cadr (assoc 'namespace x)) port)
-  (write-list1 write-ns_set_info (cadr (assoc 'ns_set x)) port)
-  (write-list1 write-multiname_info (cadr (assoc 'multiname x)) port)
-  '()))
+(define write-string_info (lambda (x port)
+  (let ((bytes (string->bytes/utf-8 x)))
+    (write-u30 (bytes-length bytes) port)
+    (write-bytes bytes port))))
 
-(define write-multiname_info (lambda (x port)
-  (cond
-   ((eq? (car x) 'attribute) (error "attribute is not supported yet"))
-   ((eq? (car x) 'RTQNameL) (error "RTQNameL is not supported yet"))
-   ((eq? (car x) 'string) (error "RTQName is not supported yet"))
-   ((eq? (car x) 'ns_set) (error "MultinameL is not supported yet"))
-   ((eq? (car (car x)) 'namespace) (write-multiname_kind_QName x port))
-   ((eq? (car (car x)) 'ns_set) (write-multiname_kind_Multiname x port))
-   )))
+(define write-namespace_info (lambda (x port)
+  (let ((kind (car x))
+	(name (cadr (cadr x))))
+    (write-u8 (cdr (assoc kind CONSTANT_Namespace_write)) port)
+    (write-u30 name port))))
+
+(define write-ns_set_info (lambda (x port)
+  (let ((xs (cdr x)))
+    (write-list0 (lambda (x p) (write-u30 (cadr x) p)) xs port))))
 
 (define write-multiname_kind_QName (lambda (x port)
   (let ((kind #x07)
@@ -658,29 +705,27 @@
     (write-u30 name port)
     (write-u30 ns_set port))))
 
-(define write-ns_set_info (lambda (x port)
-  (let ((xs (cdr x)))
-    (write-list0 (lambda (x p) (write-u30 (cadr x) p)) xs port))))
+(define write-multiname_info (lambda (x port)
+  (cond
+   ((eq? (car x) 'attribute) (error "attribute is not supported yet"))
+   ((eq? (car x) 'RTQNameL) (error "RTQNameL is not supported yet"))
+   ((eq? (car x) 'string) (error "RTQName is not supported yet"))
+   ((eq? (car x) 'ns_set) (error "MultinameL is not supported yet"))
+   ((eq? (car (car x)) 'namespace) (write-multiname_kind_QName x port))
+   ((eq? (car (car x)) 'ns_set) (write-multiname_kind_Multiname x port))
+   )))
 
-(define write-namespace_info (lambda (x port)
-  (let ((kind (car x))
-	(name (cadr (cadr x))))
-    (write-u8 (cdr (assoc kind CONSTANT_Namespace_write)) port)
-    (write-u30 name port))))
-
-(define write-string_info (lambda (x port)
-  (let ((bytes (string->bytes/utf-8 x)))
-    (write-u30 (bytes-length bytes) port)
-    (write-bytes bytes port))))
+(define write-cpool_info (lambda (x port)
+  (write-list1 write-s32 (cadr (assoc 'integer x)) port)
+  (write-list1 write-u32 (cadr (assoc 'uinteger x)) port)
+  (write-list1 write-d64 (cadr (assoc 'double x)) port)
+  (write-list1 write-string_info (cadr (assoc 'string x)) port)
+  (write-list1 write-namespace_info (cadr (assoc 'namespace x)) port)
+  (write-list1 write-ns_set_info (cadr (assoc 'ns_set x)) port)
+  (write-list1 write-multiname_info (cadr (assoc 'multiname x)) port)
+  '()))
 
 ;;; method_info writer
-
-(define	method-info-NEED_ARGUMENTS  (lambda (flags) (positive? (bitwise-and flags #x01))))
-(define	method-info-NEED_ACTIVATION (lambda (flags) (positive? (bitwise-and flags #x02))))
-(define	method-info-NEED_REST       (lambda (flags) (positive? (bitwise-and flags #x04))))
-(define	method-info-HAS_OPTIONAL    (lambda (flags) (positive? (bitwise-and flags #x08))))
-(define	method-info-SET_DXNS        (lambda (flags) (positive? (bitwise-and flags #x40))))
-(define	method-info-HAS_PARAM_NAMES (lambda (flags) (positive? (bitwise-and flags #x80))))
 
 ;; Find a key in the dictionary and return only the value.
 ;; dictionary is like ((key0 value0) (key1 value1) ...)
@@ -704,18 +749,10 @@
     (if (method-info-HAS_PARAM_NAMES (ref 'flags x)) (error "HAS_OPTIONAL is not supported yet") '()) ;todo
   )))
 
+(define write-exception_info (lambda (x port)
+  (error "exception_info is not supported yet")))
+
 ;;; traits_info writer
-(define write-traits_info (lambda (x port)
-  (let ((kind (cadr (assoc 'kind x))))
-    (cond
-     ((eq? kind 'slot) (write-trait_slot x port))
-     ((eq? kind 'method) (error "method trait is not supported yet"))
-     ((eq? kind 'getter) (error "getter trait is not supported yet"))
-     ((eq? kind 'setter) (error "setter trait is not supported yet"))
-     ((eq? kind 'class) (error "class trait is not supported yet"))
-     ((eq? kind 'function) (error "function trait is not supported yet"))
-     ((eq? kind 'const) (error "const trait is not supported yet"))
-     (else (error (format "Unknown trait type ~a" kind)))))))
 
 (define write-trait_slot (lambda (x port)
   (let ((slot_id (ref 'slot_id x))
@@ -733,6 +770,18 @@
     (write-u30 0 port) ; vindex
     )))
 
+(define write-traits_info (lambda (x port)
+  (let ((kind (cadr (assoc 'kind x))))
+    (cond
+     ((eq? kind 'slot) (write-trait_slot x port))
+     ((eq? kind 'method) (error "method trait is not supported yet"))
+     ((eq? kind 'getter) (error "getter trait is not supported yet"))
+     ((eq? kind 'setter) (error "setter trait is not supported yet"))
+     ((eq? kind 'class) (error "class trait is not supported yet"))
+     ((eq? kind 'function) (error "function trait is not supported yet"))
+     ((eq? kind 'const) (error "const trait is not supported yet"))
+     (else (error (format "Unknown trait type ~a" kind)))))))
+
 ;;; instance_info writer
 (define write-instance_info (lambda (x port)
   (error "instance_info is not supported yet")))
@@ -740,50 +789,85 @@
   (error "instance_info is not supported yet")))
 
 ;;; metadata_info writer
-(define write-metadata_info (lambda (x port)
-  (let ((name (cadr (ref 'name x)))
-	(items (ref 'items x)))
-    (write-u30 name port)
-    (write-list0 write-item_info items port))))
 
 (define write-item_info (lambda (x port)
   (let ((key (cadr (ref 'key x)))
 	(value (cadr (ref 'value x))))
     (write-u30 key port)
     (write-u30 value port))))
+
+(define write-metadata_info (lambda (x port)
+  (let ((name (cadr (ref 'name x)))
+	(items (ref 'items x)))
+    (write-u30 name port)
+    (write-list0 write-item_info items port))))
   
 ;;; script_info writer
+
 (define write-script_info (lambda (x port)
   (write-u30 (cadr (ref 'init x)) port)
   (write-list0 write-traits_info (ref 'trait x) port)))
 
-;;; method_body_info writer
-(define write-method_body_info (lambda (x port)
-  (let* ((code (encode-instructions (ref 'code x)))
-	 (code_length (bytes-length code)))
-    (write-u30 (ref 'method x) port)
-    (write-u30 (ref 'max_stack x) port)
-    (write-u30 (ref 'local_count x) port)
-    (write-u30 (ref 'init_scope_depth x) port)
-    (write-u30 (ref 'max_scope_depth x) port)
-    (write-u30 code_length port)
-    (write-bytes code port)
-    (write-list0 write-exception_info (ref 'exception x) port)
-    (write-list0 write-traits_info (ref 'trait x) port)
-    )))
-
 ;;; code writer
 
-(define encode-instructions (lambda (code)
-;(dprint code)
-  (let ((*code (write-label-replace code)))
-    (call-with-output-bytes
-     (lambda (port)
-       (write-instructions *code port))))))
+;; Caluculate instruction length
 
-(define write-label-replace (lambda (lines)
-  (let ((dst-labels (write-label-extract lines)))
-    (*write-label-replace lines dst-labels))))
+(define instruction-u30-length (lambda (value)
+  (cond
+   ((= (arithmetic-shift value -7) 0) 1)
+   ((= (arithmetic-shift value -14) 0) 2)
+   ((= (arithmetic-shift value -21) 0) 3)
+   ((= (arithmetic-shift value -28) 0) 4)
+   (else 5))))
+
+(define instruction-arg-length (lambda (type value sum)
+;(dprint (list type value sum))
+  (+ sum
+     (cond
+      ((eq? type 'u8) 1)
+      ((eq? type 'offset) 3)
+      ((memq type '(u30 register)) (instruction-u30-length value))
+      ((memq type '(double integer method multiname string uinteger))
+       (instruction-u30-length (cadr value)))
+      (else (error (format "Unknown type (instruction-arg-length): ~a ~a" type value)))))))
+
+(define instruction-length (lambda (line)
+  (let* ((inst (cadr line))
+	 (spec (hash-ref write-instruction-map inst))
+	 (arg-types (cddr spec))
+	 (arg-values (cddr line))
+	 (arg-length (foldl instruction-arg-length 0 arg-types arg-values)))
+    (add1 arg-length))))
+
+;; Add into dst-labels if the line is a label (symbol),
+;; Return next position.
+(define *write-label-extract (lambda (line pos dst-labels)
+  (if (symbol? line)
+      (begin (hash-set! dst-labels line pos)
+	     pos)
+      (+ (instruction-length line) pos))))
+
+;; Return a dictionary where label -> position
+(define write-label-extract (lambda (lines)
+  (let ((dst-labels (make-hasheq)))
+    (foldl (lambda (line pos)
+	     (*write-label-extract line pos dst-labels))
+	   0
+	   lines)
+    dst-labels)))
+
+;; Remove label symbol and replace label to offset.
+
+(define write-label (lambda (label src-labels port)
+  (let ((position (file-position port)))
+    (if (symbol? label)
+	(begin (hash-set! src-labels position label)
+	       (write-s24 0 port) ; A place holder
+	       )
+	(let* ((offset (cadr label))
+	       (diff (- offset position 3)))
+	  (write-s24 diff port)) ; in case of (offset -10) form.
+	))))
 
 (define *write-label-replace (lambda (lines dst-labels)
   (if (null? lines)
@@ -801,90 +885,15 @@
 			      line)))
 	      (cons *line (*write-label-replace (cdr lines) dst-labels))))))))
 
-;; Return a dictionary where label -> position
-(define write-label-extract (lambda (lines)
-  (let ((dst-labels (make-hasheq)))
-    (foldl (lambda (line pos)
-	     (*write-label-extract line pos dst-labels))
-	   0
-	   lines)
-    dst-labels)))
-  
-;; Add into dst-labels if the line is a label (symbol),
-;; Return next position.
-(define *write-label-extract (lambda (line pos dst-labels)
-  (if (symbol? line)
-      (begin (hash-set! dst-labels line pos)
-	     pos)
-      (+ (instruction-length line) pos))))
+(define write-label-replace (lambda (lines)
+  (let ((dst-labels (write-label-extract lines)))
+    (*write-label-replace lines dst-labels))))
 
-(define instruction-length (lambda (line)
-  (let* ((inst (cadr line))
-	 (spec (hash-ref write-instruction-map inst))
-	 (arg-types (cddr spec))
-	 (arg-values (cddr line))
-	 (arg-length (foldl instruction-arg-length 0 arg-types arg-values)))
-    (add1 arg-length))))
-
-(define instruction-arg-length (lambda (type value sum)
-;(dprint (list type value sum))
-  (+ sum
-     (cond
-      ((eq? type 'u8) 1)
-      ((eq? type 'offset) 3)
-      ((memq type '(u30 register)) (instruction-u30-length value))
-      ((memq type '(double integer method multiname string uinteger))
-       (instruction-u30-length (cadr value)))
-      (else (error (format "Unknown type (instruction-arg-length): ~a ~a" type value)))))))
-
-(define instruction-u30-length (lambda (value)
-  (cond
-   ((= (arithmetic-shift value -7) 0) 1)
-   ((= (arithmetic-shift value -14) 0) 2)
-   ((= (arithmetic-shift value -21) 0) 3)
-   ((= (arithmetic-shift value -28) 0) 4)
-   (else 5))))
-    
-(define write-arguments1 (lambda (args spec src-labels port)
-  (for-each (lambda (type arg)
-	      (cond
-	       ((eq? type 'u8) (write-u8 arg port))
-	       ((eq? type 's24) (write-s24 arg port))
-	       ((eq? type 'u30) (write-u30 arg port))
-	       ((eq? type 'double) (write-id type arg port))
-	       ((eq? type 'integer) (write-id type arg port))
-	       ((eq? type 'method) (write-id type arg port))
-	       ((eq? type 'multiname) (write-id type arg port))
-	       ((eq? type 'offset) (write-label arg src-labels port))
-	       ((eq? type 'register) (write-u30 arg port))
-	       ((eq? type 'string) (write-id type arg port))
-	       ((eq? type 'uinteger) (write-id type arg port))
-	       (else (error (format "Unknown argument type: ~a" type)))
-	       ))
-	    spec args)))
-
-(define write-label (lambda (label src-labels port)
-  (let ((position (file-position port)))
-    (if (symbol? label)
-	(begin (hash-set! src-labels position label)
-	       (write-s24 0 port) ; A place holder
-	       )
-	(let* ((offset (cadr label))
-	       (diff (- offset position 3)))
-	  (write-s24 diff port)) ; in case of (offset -10) form.
-	))))
+(define write-offset (lambda (x port)
+  (let ((offset (+ (file-position port) 3)))
+    (write-s24 (- (cadr x) offset) port))))
 
 ;;
-
-(define write-instructions (lambda (code port)
-  (for-each (lambda (statement) 
-	      (write-instruction statement port)) code)))
-
-(define write-instruction (lambda (statement port)
-  (let* ((inst (cadr statement))
-	 (spec (hash-ref write-instruction-map inst)))
-    (write-u8 (car spec) port)
-    (write-arguments (cddr statement) (cddr spec) port))))
     
 (define write-arguments (lambda (args spec port)
   (for-each (lambda (type arg)
@@ -904,88 +913,57 @@
 	       ))
 	    spec args)))
 
-(define write-offset (lambda (x port)
-  (let ((offset (+ (file-position port) 3)))
-    (write-s24 (- (cadr x) offset) port))))
+(define write-instruction (lambda (statement port)
+  (let* ((inst (cadr statement))
+	 (spec (hash-ref write-instruction-map inst)))
+    (write-u8 (car spec) port)
+    (write-arguments (cddr statement) (cddr spec) port))))
 
-;; Make sure if the type is correct and write the index.
-(define write-id (lambda (type x port)
-  (cond
-   ((not (pair? x)) (error (format "Type error, expect: (~a i) given: ~a" type x)))
-   ((eq? type (car x)) (write-u30 (cadr x) port))
-   (else (error (format "Type error, expect: (~a i) given: ~a" type x))))))
+(define write-instructions (lambda (code port)
+  (for-each (lambda (statement) 
+	      (write-instruction statement port)) code)))
 
-(define write-exception_info (lambda (x port)
-  (error "exception_info is not supported yet")))
+(define encode-instructions (lambda (code)
+;(dprint code)
+  (let ((*code (write-label-replace code)))
+    (call-with-output-bytes
+     (lambda (port)
+       (write-instructions *code port))))))
 
-; todo: in case of #f (entry is none)
-; Write entries (xs) by func. The count is the number of entries plus one.
-; func is an output function as (func object port)
-(define write-list1 (lambda (func xs port)
-  (if xs
-      (let ((n (add1 (length xs))))
-	(write-u30 n port)
-	(for-each (lambda (x) (func x port)) xs))
-      '())))
+;;; method_body_info writer
 
-(define write-list0 (lambda (func xs port)
-  (if xs
-      (let ((n (length xs)))
-	(write-u30 n port)
-	(for-each (lambda (x) (func x port)) xs))
-      '())))
+(define write-method_body_info (lambda (x port)
+  (let* ((code (encode-instructions (ref 'code x)))
+	 (code_length (bytes-length code)))
+    (write-u30 (ref 'method x) port)
+    (write-u30 (ref 'max_stack x) port)
+    (write-u30 (ref 'local_count x) port)
+    (write-u30 (ref 'init_scope_depth x) port)
+    (write-u30 (ref 'max_scope_depth x) port)
+    (write-u30 code_length port)
+    (write-bytes code port)
+    (write-list0 write-exception_info (ref 'exception x) port)
+    (write-list0 write-traits_info (ref 'trait x) port)
+    )))
 
-(define write-u8 (lambda (i port)
-  (write-byte i port)))
+;;; abcFile writer
 
-(define write-s24 (lambda (i port)
-  (let* ((i0 (if (positive? i)
-		 i
-		 (+ i #x1000000)))
-	 (b0 (bitwise-and i0 #xff))
-	 (b1 (bitwise-and (arithmetic-shift i0 -8) #xff))
-	 (b2 (bitwise-and (arithmetic-shift i0 -16) #xff)))
-    (write-byte b0 port)
-    (write-byte b1 port)
-    (write-byte b2 port))))
-
-(define write-d64 (lambda (e port)
-  (write-bytes (real->floating-point-bytes e 8 #f) port)))
-
-(define write-u16 (lambda (i port)
-  (let ((b0 (bitwise-and #xff i))
-	(b1 (arithmetic-shift i -8)))
-    (write-byte b0 port)
-    (write-byte b1 port))))
-
-(define write-s32 (lambda (i port)
-  (write-u32
-   (if (negative? i)
-       (+ i #x100000000)
-       i) port)))
-
-(define write-u30 (lambda (i port)
-  (write-u32 i port)))
-
-(define write-u32 (lambda (i port)
-  (let ((e (bitwise-and (arithmetic-shift i -28) #x7f))
-	(d (bitwise-and (arithmetic-shift i -21) #x7f))
-	(c (bitwise-and (arithmetic-shift i -14) #x7f))
-	(b (bitwise-and (arithmetic-shift i  -7) #x7f))
-	(a (bitwise-and i #x7f)))
-    (if (or (positive? b) (positive? c) (positive? d) (positive? e))
-	(begin (write-byte (bitwise-ior a #x80) port)
-	       (if (or (positive? c) (positive? d) (positive? e))
-		   (begin (write-byte (bitwise-ior b #x80) port)
-			  (if (or (positive? d) (positive? e))
-			      (begin (write-byte (bitwise-ior c #x80) port)
-				     (if (positive? e)
-					 (begin (write-byte (bitwise-ior d #x80) port)
-						(write-byte e port))
-					 (write-byte d port)))
-			      (write-byte c port)))
-		   (write-byte b port)))
-	(write-byte a port)))))
+(define write-abc (lambda (abc port)
+  (if (not (eq? (car abc) 'abc)) (error (format "This is not a ABC form: ~a" abc)) '())
+  (let* ((*abc (cdr abc))
+	 (instance (ref 'instance *abc))
+	 (class_count (length instance)))
+    (write-u16 16 port)
+    (write-u16 46 port)
+    (write-cpool_info (cadr (assoc 'constant_pool *abc)) port)
+    (write-list0 write-method_info (ref 'method *abc) port)
+    (write-list0 write-metadata_info (ref 'metadata *abc) port)
+    (write-u30 class_count port)
+    (for-each (lambda (each) (write-instance_info each port)) instance)
+    (for-each (lambda (each) (write-class_info each port)) (ref 'class *abc))
+    (write-list0 write-script_info (ref 'script *abc) port)
+    (write-list0 write-method_body_info (ref 'method_body *abc) port)
+)))
 
 ;;;;;;;;;; ASM Form Encoder ;;;;;;;;;;
 
@@ -996,28 +974,6 @@
     (string)
     (namespace)
     (multiname)))
-
-(define from-asm (lambda (x)
-  (if (not (eq? (car x) 'asm)) (error (format "This is not a ASM form: ~a" x)) '())
-  (encode-id (cdr x) NEW-CONSTANT-DICT
-    (lambda (body dict)
-      (let* ((ns_set (ref 'ns_set body '()))
-	     (method (ref 'method body))
-	     (script (ref 'script body))
-	     (method-signature (from-asm-method-signature method))
-	     (method_body (from-asm-method_body method))
-	     (constant (from-asm-constant dict ns_set)))
-	`(abc
-	  (minor_version 16) (major_version 46)
-	  (constant_pool ,constant)
-	  (method ,method-signature)
-	  (metadata ())
-	  (instance ())
-	  (class ())
-	  (script ,script)
-	  (method_body ,method_body)
-	  )
-	)))))
 
 (define from-asm-constant (lambda (dict ns_set)
   (list
@@ -1033,35 +989,28 @@
 (define from-asm-method-signature (lambda (xs)
   (map (lambda (x) (ref 'signature x)) xs)))
 
-;;; Extract method_bodies from list of method (signature + body)
-;;; Each method has its index for the signature like (method 1)
-(define from-asm-method_body (lambda (xs)
-  (*from-asm-method_body xs 0)))
+;;
 
-(define *from-asm-method_body (lambda (xs index)
-  (if (null? xs)
-      '()
-      (let* ((method (car xs))
-	     (hint (from-asm-make-hint method))
-	     (code (ref 'code method)))
-	(cons `((method ,index)
-		,@hint
-		(code ,code)
-		(exception ())
-		(trait ()))
-	      (*from-asm-method_body (cdr xs) (add1 index)))))))
+;;; A tiny interpreter for hint specification
+;;; (arg 0) is replaced to the value of first argument.
+(define *from-asm-make-hint-eval (lambda (args expr)
+  (if (pair? expr)
+      (let ((params (map (lambda (each) (*from-asm-make-hint-eval args each))
+			 (cdr expr)))
+	    (key (car expr)))
+	(cond
+	 ((eq? key 'arg) (list-ref args (car params)))
+	 ((eq? key '+) (apply + params))
+	 ((eq? key '-) (apply - params))
+	 (else (error (format "Unknown hint definition: ~a" expr)))))
+      expr)))
 
-;;; Visit code and extract the hint information from it.
-;;; (hint ((max_stack ?) (local_count ?) (init_scope_depth 0) (max_scope_depth ?)))
-(define from-asm-make-hint (lambda (method)
-  (let* ((hint (assoc 'hint method))
-	 (signature (ref 'signature method #f))
-	 (local_count (if signature
-			  (length (ref 'param_type signature))
-			  0)))
-    (if hint
-	(cadr hint)
-	(*from-asm-make-hint (ref 'code method) 0 0 local_count 0 0)))))
+;;; (*from-asm-make-hint-eval '(1 2) '(+ 10 (arg 1))) => 12
+(define from-asm-make-hint-eval (lambda (key command spec)
+  (let ((expr (assoc key spec)))
+    (if expr
+	(*from-asm-make-hint-eval (cddr command) (cadr expr))
+	0))))
 
 (define *from-asm-make-hint (lambda (lines stack max_stack local_count scope max_scope)
   (if (null? lines)
@@ -1081,40 +1030,37 @@
 		 (*max_scope (max max_scope *scope)))
 	    (*from-asm-make-hint (cdr lines) *stack *max_stack *local_count *scope *max_scope))))))
 
-;;; (*from-asm-make-hint-eval '(1 2) '(+ 10 (arg 1))) => 12
-(define from-asm-make-hint-eval (lambda (key command spec)
-  (let ((expr (assoc key spec)))
-    (if expr
-	(*from-asm-make-hint-eval (cddr command) (cadr expr))
-	0))))
+;; Visit code and extract the hint information from it.
+;; (hint ((max_stack ?) (local_count ?) (init_scope_depth 0) (max_scope_depth ?)))
+(define from-asm-make-hint (lambda (method)
+  (let* ((hint (assoc 'hint method))
+	 (signature (ref 'signature method #f))
+	 (local_count (if signature
+			  (length (ref 'param_type signature))
+			  0)))
+    (if hint
+	(cadr hint)
+	(*from-asm-make-hint (ref 'code method) 0 0 local_count 0 0)))))
 
-;;; A tiny interpreter for hint specification
-;;; (arg 0) is replaced to the value of first argument.
-(define *from-asm-make-hint-eval (lambda (args expr)
-  (if (pair? expr)
-      (let ((params (map (lambda (each) (*from-asm-make-hint-eval args each))
-			 (cdr expr)))
-	    (key (car expr)))
-	(cond
-	 ((eq? key 'arg) (list-ref args (car params)))
-	 ((eq? key '+) (apply + params))
-	 ((eq? key '-) (apply - params))
-	 (else (error (format "Unknown hint definition: ~a" expr)))))
-      expr)))
+(define *from-asm-method_body (lambda (xs index)
+  (if (null? xs)
+      '()
+      (let* ((method (car xs))
+	     (hint (from-asm-make-hint method))
+	     (code (ref 'code method)))
+	(cons `((method ,index)
+		,@hint
+		(code ,code)
+		(exception ())
+		(trait ()))
+	      (*from-asm-method_body (cdr xs) (add1 index)))))))
 
-;;; Encode literals into index form, and build a constant dictionary.
-;;; "hello" => (string 1)
-;;;
-;;; CPS style encoder. Encoded expression and new dictionary is passed to cont.
-;;; cont is a function like (cont expr dictionary)
+;; Extract method_bodies from list of method (signature + body)
+;; Each method has its index for the signature like (method 1)
+(define from-asm-method_body (lambda (xs)
+  (*from-asm-method_body xs 0)))
 
-(define encode-id (lambda (x dict cont)
-  (cond
-   ((string? x) (encode-id-add 'string x dict cont))
-   ((eq? x '*) (cont '(multiname 0) dict)) ;note: '* can be multiname, namespace, or ns_set. but never mind.
-   ((not (pair? x)) (cont x dict))
-   (else (encode-id-map encode-id x dict
-	   (lambda (x dict) (encode-id-apply x dict cont)))))))
+;;; encode-id
 
 ;; Map the CPS function on the list
 (define encode-id-map (lambda (proc xs dict cont)
@@ -1128,13 +1074,6 @@
 ;; Make a index depending on the first element.
 ;; (package "") => (namespace 1)
 ;; ((package "") "hello") => (multiname 1)
-
-(define encode-id-apply (lambda (x dict cont)
-  (cond
-   ((namespace-id? x) (encode-id-add 'namespace x  dict cont))
-   ((multiname-id? x) (encode-id-add 'multiname x  dict cont))
-   ((eq? (car x) 'code) (encode-id-code x dict cont))
-   (else (cont x dict)))))
 
 ;; Register a value into the dictionary
 (define encode-id-add (lambda (type x dict cont)
@@ -1163,10 +1102,13 @@
 ;; Encode instructions
 ;; Because encoding of argument depends on each instruction, I need a
 ;; separate path to encode it again. It might be better to fix later.
-
-(define encode-id-code (lambda (x dict cont)
-  (encode-id-map *encode-id-code (cadr x) dict
-    (lambda (x dict) (cont (list 'code x) dict)))))
+  
+(define encode-id-typed-add (lambda (pair dict cont)
+  (let ((type (car pair))
+	(value (cdr pair)))
+    (if (memq type '(integer uinteger double))
+	(encode-id-add type value dict cont)
+	(cont value dict)))))
 
 (define *encode-id-code (lambda (x dict cont)
   (if (symbol? x)
@@ -1179,16 +1121,71 @@
 	(encode-id-map encode-id-typed-add pairs dict 
 		       (lambda (args dict)
 			 (cont `(,pos ,symcode ,@args) dict)))))))
-  
-(define encode-id-typed-add (lambda (pair dict cont)
-  (let ((type (car pair))
-	(value (cdr pair)))
-    (if (memq type '(integer uinteger double))
-	(encode-id-add type value dict cont)
-	(cont value dict)))))
+
+(define encode-id-code (lambda (x dict cont)
+  (encode-id-map *encode-id-code (cadr x) dict
+    (lambda (x dict) (cont (list 'code x) dict)))))
+
+(define encode-id-apply (lambda (x dict cont)
+  (cond
+   ((namespace-id? x) (encode-id-add 'namespace x  dict cont))
+   ((multiname-id? x) (encode-id-add 'multiname x  dict cont))
+   ((eq? (car x) 'code) (encode-id-code x dict cont))
+   (else (cont x dict)))))
+
+;; Encode literals into index form, and build a constant dictionary.
+;; "hello" => (string 1)
+;;
+;; CPS style encoder. Encoded expression and new dictionary is passed to cont.
+;; cont is a function like (cont expr dictionary)
+
+(define encode-id (lambda (x dict cont)
+  (cond
+   ((string? x) (encode-id-add 'string x dict cont))
+   ((eq? x '*) (cont '(multiname 0) dict)) ;note: '* can be multiname, namespace, or ns_set. but never mind.
+   ((not (pair? x)) (cont x dict))
+   (else (encode-id-map encode-id x dict
+	   (lambda (x dict) (encode-id-apply x dict cont)))))))
+
+(define from-asm (lambda (x)
+  (if (not (eq? (car x) 'asm)) (error (format "This is not a ASM form: ~a" x)) '())
+  (encode-id (cdr x) NEW-CONSTANT-DICT
+    (lambda (body dict)
+      (let* ((ns_set (ref 'ns_set body '()))
+	     (method (ref 'method body))
+	     (script (ref 'script body))
+	     (method-signature (from-asm-method-signature method))
+	     (method_body (from-asm-method_body method))
+	     (constant (from-asm-constant dict ns_set)))
+	`(abc
+	  (minor_version 16) (major_version 46)
+	  (constant_pool ,constant)
+	  (method ,method-signature)
+	  (metadata ())
+	  (instance ())
+	  (class ())
+	  (script ,script)
+	  (method_body ,method_body)
+	  )
+	)))))
 
 ;;; todo rename func name
 
 (define dprint (lambda (obj)
   (pretty-print obj)
   obj))
+
+;;;;;;;;;; The main public reader and writer ;;;;;;;;;;
+
+;; De-serialize binary stream to ASM form
+(define read-asm (lambda (port)
+  (to-asm (read-abc port))))
+
+;; Serialize ASM or ABC form to binary stream
+;; If (car expr) is 'abc, the form is abc.
+(define write-asm (lambda (form port)
+  (let ((abc (cond
+	      ((eq? (car form) 'asm) (from-asm form))
+	      ((eq? (car form) 'abc) form)
+	      (else (error (format "This is not ABC nor ASM form: ~a" form))))))
+    (write-abc abc port))))
