@@ -86,6 +86,14 @@
 (check (to-bytes write-u32 #xffffffff) => (bytes #xff #xff #xff #xff #x0f))
 ;(check (to-bytes write-u32 #x80000000) => (bytes #x80 #x80 #x80 #x80 #xf8))
 
+;;; list writer
+
+(check (to-bytes (lambda (x p) (write-list1 write-u30 x p)) '()) => (bytes 1))
+
+;; string writer
+
+(check (to-bytes write-string_info "hello") => (bytes #x05 #x68 #x65 #x6c #x6c #x6f))
+
 ;;; Round trip
 
 (roundtrip-check (lambda (o p) (write-list1 write-u30 o p))
@@ -193,6 +201,34 @@
 (check (decode-id '(ns_set 2) test-abc-data) => '(ns_set 2)) ; no convertion
 (check (decode-id '(multiname 1) test-abc-data) => '((package "flash.display") "hello"))
 (check (decode-id '(multiname 0) test-abc-data) => '*)
+
+;;; cpool_info writer
+
+(check (to-bytes write-cpool_info
+		 '((integer ())
+		   (uinteger ())
+		   (double ())
+		   (string ())
+		   (namespace ())
+		   (ns_set ())
+		   (multiname ())
+		   )) => (bytes 1 1 1 1 1 1 1))
+
+(check (to-bytes write-cpool_info
+		 '((integer (-10 0 10))
+		   (uinteger (10 20 30))
+		   (double ())
+		   (string ("hello" "world" "flash.display"))
+		   (namespace ((private (string 1))
+			       (package (string 3))))
+		   (ns_set ((ns_set (namespace 1))
+			    (ns_set (namespace 1) (namespace 2))))
+		   (multiname (((namespace 2) (string 1))
+			       ((namespace 1) (string 2))))
+		   )) => (bytes #x4 #xf6 #xff #xff #xff #xf #x0 #xa #x4 #xa #x14 #x1e #x1 #x4 #x5 #x68 #x65 #x6c #x6c #x6f #x5 #x77 #x6f #x72 #x6c #x64 #xd #x66 #x6c #x61 #x73 #x68 #x2e #x64 #x69 #x73 #x70 #x6c #x61 #x79 #x3 #x5 #x1 #x16 #x3 #x3 #x1 #x1 #x2 #x1 #x2 #x3 #x7 #x2 #x1 #x7 #x1 #x2 ))
+
+
+
 
 ;;; Round trip of cpool_info
 (roundtrip-check write-cpool_info read-cpool_info
@@ -547,3 +583,17 @@
 
 
 
+;;;; ulitity
+
+(define bytes-print
+  (lambda (bstr)
+    (write-string "(bytes ")
+    (for ((e bstr))
+	 (write-string "#x")
+	 (write-string (number->string e 16))
+	 (write-string " ")
+	 )
+    (write-string ")")
+))
+
+;(bytes-print #"\4\366\377\377\377\17\0\n\4\n\24\36\1\4\5hello\5world\rflash.display\3\5\1\26\3\3\1\1\2\1\2\3\a\2\1\a\1\2")

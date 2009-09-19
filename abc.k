@@ -660,19 +660,18 @@
 ; todo: in case of #f (entry is none)
 ; Write entries (xs) by func. The count is the number of entries plus one.
 ; func is an output function as (func object port)
-(define write-list1 (lambda (func xs port)
-  (if xs
-      (let ((n (add1 (length xs))))
-	(write-u30 n port)
-	(for-each (lambda (x) (func x port)) xs))
-      '())))
 
-(define write-list0 (lambda (func xs port)
-  (if xs
-      (let ((n (length xs)))
-	(write-u30 n port)
-	(for-each (lambda (x) (func x port)) xs))
-      '())))
+(define write-list1
+  (lambda (func xs port)
+    (let ((n (add1 (length xs))))
+      (write-u30 n port)
+      (for-each (lambda (x) (func x port)) xs))))
+
+(define write-list0
+  (lambda (func xs port)
+    (let ((n (length xs)))
+      (write-u30 n port)
+      (for-each (lambda (x) (func x port)) xs))))
 
 ;;; cpool_info writer
 
@@ -717,15 +716,15 @@
    ((eq? (car (car x)) 'ns_set) (write-multiname_kind_Multiname x port))
    )))
 
-(define write-cpool_info (lambda (x port)
-  (write-list1 write-s32 (cadr (assoc 'integer x)) port)
-  (write-list1 write-u32 (cadr (assoc 'uinteger x)) port)
-  (write-list1 write-d64 (cadr (assoc 'double x)) port)
-  (write-list1 write-string_info (cadr (assoc 'string x)) port)
-  (write-list1 write-namespace_info (cadr (assoc 'namespace x)) port)
-  (write-list1 write-ns_set_info (cadr (assoc 'ns_set x)) port)
-  (write-list1 write-multiname_info (cadr (assoc 'multiname x)) port)
-  '()))
+(define write-cpool_info
+  (lambda (x port)
+    (write-list1 write-s32 (cadr (assoc 'integer x)) port)
+    (write-list1 write-u32 (cadr (assoc 'uinteger x)) port)
+    (write-list1 write-d64 (cadr (assoc 'double x)) port)
+    (write-list1 write-string_info (cadr (assoc 'string x)) port)
+    (write-list1 write-namespace_info (cadr (assoc 'namespace x)) port)
+    (write-list1 write-ns_set_info (cadr (assoc 'ns_set x)) port)
+    (write-list1 write-multiname_info (cadr (assoc 'multiname x)) port)))
 
 ;;; method_info writer
 
@@ -950,22 +949,22 @@
 
 ;;; abcFile writer
 
-(define write-abc (lambda (abc port)
-  (if (not (eq? (car abc) 'abc)) (error (format "This is not a ABC form: ~a" abc)) '())
-  (let* ((*abc (cdr abc))
-	 (instance (ref 'instance *abc))
-	 (class_count (length instance)))
-    (write-u16 16 port)
-    (write-u16 46 port)
-    (write-cpool_info (cadr (assoc 'constant_pool *abc)) port)
-    (write-list0 write-method_info (ref 'method *abc) port)
-    (write-list0 write-metadata_info (ref 'metadata *abc) port)
-    (write-u30 class_count port)
-    (for-each (lambda (each) (write-instance_info each port)) instance)
-    (for-each (lambda (each) (write-class_info each port)) (ref 'class *abc))
-    (write-list0 write-script_info (ref 'script *abc) port)
-    (write-list0 write-method_body_info (ref 'method_body *abc) port)
-)))
+(define write-abc
+  (lambda (abc port)
+    (if (not (eq? (car abc) 'abc)) (error (format "This is not a ABC form: ~a" abc)) '())
+    (let* ((*abc (cdr abc))
+	   (instance (ref 'instance *abc))
+	   (class_count (length instance)))
+      (write-u16 16 port)
+      (write-u16 46 port)
+      (write-cpool_info (cadr (assoc 'constant_pool *abc)) port)
+      (write-list0 write-method_info (ref 'method *abc) port)
+      (write-list0 write-metadata_info (ref 'metadata *abc) port)
+      (write-u30 class_count port)
+      (for-each (lambda (each) (write-instance_info each port)) instance)
+      (for-each (lambda (each) (write-class_info each port)) (ref 'class *abc))
+      (write-list0 write-script_info (ref 'script *abc) port)
+      (write-list0 write-method_body_info (ref 'method_body *abc) port))))
 
 ;;;;;;;;;; ASM Form Encoder ;;;;;;;;;;
 
@@ -1180,14 +1179,16 @@
 ;;;;;;;;;; The main public reader and writer ;;;;;;;;;;
 
 ;; De-serialize binary stream to ASM form
-(define read-asm (lambda (port)
-  (to-asm (read-abc port))))
+(define read-asm
+  (lambda (port)
+    (to-asm (read-abc port))))
 
 ;; Serialize ASM or ABC form to binary stream
 ;; If (car expr) is 'abc, the form is abc.
-(define write-asm (lambda (form port)
-  (let ((abc (cond
-	      ((eq? (car form) 'asm) (from-asm form))
-	      ((eq? (car form) 'abc) form)
-	      (else (error (format "This is not ABC nor ASM form: ~a" form))))))
-    (write-abc abc port))))
+(define write-asm
+  (lambda (form port)
+    (let ((abc (cond
+		((eq? (car form) 'asm) (from-asm form))
+		((eq? (car form) 'abc) form)
+		(else (error (format "This is not ABC nor ASM form: ~a" form))))))
+      (write-abc abc port))))
