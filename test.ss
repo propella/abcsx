@@ -407,6 +407,16 @@
 
 ;;; Encode-id test
 
+(encode-id-add 'string "first word" NEW-CONSTANT-DICT
+  (lambda (x dict)
+    (check x => '(string 1))
+    (encode-id-add 'string "first word" dict
+      (lambda (x dict)
+	(check x => '(string 1))
+	(encode-id-add 'string "second word" dict
+	  (lambda (x dict)
+	    (check x => '(string 2))))))))
+
 ;;; string
 
 (check (encode-id "hello" NEW-CONSTANT-DICT (lambda (x dict) x))  => '(string 1))
