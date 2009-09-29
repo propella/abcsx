@@ -39,7 +39,6 @@ package com.hurlant.eval {
 		 */
 		public static function wrapInSWF(bytes:Array):ByteArray {
 			if (bytes.length==0) return null;
-			if (getType(bytes[0])!=2) return null;
 			// wrap our ABC bytecodes in a SWF.
 			var out:ByteArray = new ByteArray;
 			out.endian = Endian.LITTLE_ENDIAN;
@@ -81,12 +80,11 @@ package com.hurlant.eval {
 		private static var loaders:Array = [];
 		public static function loadBytes(bytes:*, inplace:Boolean=false, callback:Function = null):Boolean {
 			if (bytes is ByteArray) bytes.position = 0;
-			if (bytes is Array || (getType(bytes)==2)) {
-				if (!(bytes is Array)) {
-					bytes = [ bytes ];
-				}
-				bytes = wrapInSWF(bytes);
+			if (!(bytes is Array)) {
+			    bytes = [ bytes ];
 			}
+			bytes = wrapInSWF(bytes);
+
 			try {
 				var c:LoaderContext = null;
 				if (inplace) {
@@ -106,49 +104,6 @@ package com.hurlant.eval {
 				// darn it. the running of the bytes doesn't happen until current scripts are done. no try/catch can work
 			}
 			return false;
-		}
-		public static function isSWF(data:ByteArray):Boolean {
-			var type:int = getType(data);
-			return (type&1)==1;
-		}
-		/**
-		 * getType.
-		 * ripped from abcdump.as.
-		 * 
-		 * This looks at the array header and decides what it is.
-		 * 
-		 * (getType&1)==1 => it's  SWF
-		 * (getType&2)==2 => it's  ABC
-		 * (getType&4)==4)=> it's compressed
-		 *  
-		 * @param data
-		 * @return 
-		 * 
-		 */
-		public static function getType(data:ByteArray):int {
-			data.endian = "littleEndian";
-			data.position=0;
-			var version:uint = data.readUnsignedInt();
-			switch (version) {
-			case 46<<16|14:
-			case 46<<16|15:
-			case 46<<16|16:
-				return 2;
-			case 67|87<<8|83<<16|9<<24: // SWC9
-			case 67|87<<8|83<<16|8<<24: // SWC8
-			case 67|87<<8|83<<16|7<<24: // SWC7
-			case 67|87<<8|83<<16|6<<24: // SWC6
-				return 5;
-			case 70|87<<8|83<<16|9<<24: // SWF9
-			case 70|87<<8|83<<16|8<<24: // SWF8
-			case 70|87<<8|83<<16|7<<24: // SWF7
-			case 70|87<<8|83<<16|6<<24: // SWF6
-			case 70|87<<8|83<<16|5<<24: // SWF5
-			case 70|87<<8|83<<16|4<<24: // SWF4
-				return 1;
-			default:
-				return 0;
-			}
 		}
 	}
 }
