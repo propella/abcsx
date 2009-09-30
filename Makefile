@@ -1,4 +1,4 @@
-all : test test1 test2
+all : test test1 test2 test3
 
 test :
 	./test.ss
@@ -14,8 +14,13 @@ test2 :
 	./runasm.sh examples/callLocal.sx
 	./runasm.sh examples/call.sx
 
+test3 :
+	./asm.ss examples/textField.sx
+	./swf_abc.erl 100 100 textField examples/textField.sx.abc
+	open textField.swf
+
 clean :
-	rm -f *.abc examples/*.abc launcher/*.abc
+	rm -f *.abc examples/*.abc launcher/*.abc textField.swf
 
 %.abc : %.as
 #	asc $<

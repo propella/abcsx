@@ -257,6 +257,25 @@
 		   (vkind 0)
 		   (metadata ())))
 
+(roundtrip-check write-traits_info read-traits_info
+		 '((kind class)
+		   (name (multiname 7))
+		   (slot_id 1)
+		   (classi (class 0))
+		   (metadata ())))
+
+(roundtrip-check write-instance_info read-instance_info
+		 '((name (multiname 3))
+		   (super_name (multiname 5))
+		   (flags 9)
+		   (protectedNs (namespace 7))
+		   (interface ((multiname 11) (multiname 13)))
+		   (iinit (method 17))
+		   (trait ())))
+
+(roundtrip-check write-class_info read-class_info
+		 '((cinit (method 0)) (trait ())))
+
 ;;; Jump reader
 
 (check (find-label-new 10 '()) => '(10))

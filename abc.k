@@ -338,9 +338,9 @@
 
 (define read-class_info (lambda (port)
   (let ((cinit (read-u30 port))
-	(traits (read-list0 read-traits_info port)))
+	(trait (read-list0 read-traits_info port)))
     `((cinit (method ,cinit))
-      (traits ,traits)))))
+      (trait ,trait)))))
 
 ;;; script_info reader
 
@@ -657,9 +657,10 @@
 
 ;;; List Writer
 
-; todo: in case of #f (entry is none)
-; Write entries (xs) by func. The count is the number of entries plus one.
-; func is an output function as (func object port)
+;; Write the number of entries, and entries itself by func.
+;; There are two versions.
+;; write-list1's count is the number of entries plus one that is used in cpool info.
+;; write-list1's count is the number of entries.
 
 (define write-list1
   (lambda (func xs port)
@@ -736,7 +737,7 @@
   (let ((found (assoc key dictionary)))
     (cond (found (cadr found))
 	  ((not (null? default)) (car default))
-	  (else error (format "'~a' does not found in ~a." key dictionary))))))
+	  (else (error (format "'~a' is not found in ~a." key dictionary)))))))
 
 (define write-method_info (lambda (x port)
   (let* ((param_type (ref 'param_type x))
@@ -750,44 +751,75 @@
     (if (method-info-HAS_PARAM_NAMES (ref 'flags x)) (error "HAS_OPTIONAL is not supported yet") '()) ;todo
   )))
 
-(define write-exception_info (lambda (x port)
-  (error "exception_info is not supported yet")))
+(define write-exception_info (lambda (x port) (error "exception_info is not supported yet")))
 
 ;;; traits_info writer
 
-(define write-trait_slot (lambda (x port)
-  (let ((slot_id (ref 'slot_id x))
-	(type_name (ref 'type_name x))
-	(vindex (if (= (ref 'vindex x) 0)
-		    0
-		    (error "vindex is not supported yet")))
-	(metadata_count (if (null? (ref 'metadata x))
-			    0
-			    (error "metadata is not supported et"))))
-    (write-id 'multiname (ref 'name x) port)
-    (write-u8 Trait_Slot port)
-    (write-u30 slot_id port)
-    (write-id 'multiname type_name port)
-    (write-u30 0 port) ; vindex
-    )))
+(define write-trait_slot
+  (lambda (x port)
+    (let ((slot_id (ref 'slot_id x))
+	  (type_name (ref 'type_name x))
+	  (vindex (if (= (ref 'vindex x) 0)
+		      0
+		      (error "vindex is not supported yet")))
+	  (metadata_count (if (null? (ref 'metadata x))
+			      0
+			      (error "metadata is not supported et"))))
+      (write-id 'multiname (ref 'name x) port)
+      (write-u8 Trait_Slot port)
+      (write-u30 slot_id port)
+      (write-id 'multiname type_name port)
+      (write-u30 0 port) ; vindex
+      ; metadata omitted (ATTR_Metadata)
+      )))
 
-(define write-traits_info (lambda (x port)
-  (let ((kind (cadr (assoc 'kind x))))
-    (cond
-     ((eq? kind 'slot) (write-trait_slot x port))
-     ((eq? kind 'method) (error "method trait is not supported yet"))
-     ((eq? kind 'getter) (error "getter trait is not supported yet"))
-     ((eq? kind 'setter) (error "setter trait is not supported yet"))
-     ((eq? kind 'class) (error "class trait is not supported yet"))
-     ((eq? kind 'function) (error "function trait is not supported yet"))
-     ((eq? kind 'const) (error "const trait is not supported yet"))
-     (else (error (format "Unknown trait type ~a" kind)))))))
+(define write-trait_class ;; todo: slot_id and metadata can be converged with other slots.
+  (lambda (x port)
+    (let ((slot_id (ref 'slot_id x))
+	  (classi (ref 'classi x)))
+      (write-id 'multiname (ref 'name x) port)
+      (write-u8 Trait_Class port)
+      (write-u30 slot_id port)
+      (write-id 'class classi port)
+      ; metadata omitted (ATTR_Metadata)
+      )))
 
-;;; instance_info writer
-(define write-instance_info (lambda (x port)
-  (error "instance_info is not supported yet")))
-(define write-class_info (lambda (x port)
-  (error "instance_info is not supported yet")))
+(define write-traits_info
+  (lambda (x port)
+    (let ((kind (cadr (assoc 'kind x))))
+      (cond
+       ((eq? kind 'slot) (write-trait_slot x port))
+       ((eq? kind 'method) (error "method trait is not supported yet"))
+       ((eq? kind 'getter) (error "getter trait is not supported yet"))
+       ((eq? kind 'setter) (error "setter trait is not supported yet"))
+       ((eq? kind 'class) (write-trait_class x port))
+       ((eq? kind 'function) (error "function trait is not supported yet"))
+       ((eq? kind 'const) (error "const trait is not supported yet"))
+       (else (error (format "Unknown trait type ~a" kind)))))))
+
+(define write-instance_info
+  (lambda (x port)
+    (let ((name (ref 'name x))
+	  (super_name (ref 'super_name x))
+	  (flags (ref 'flags x))
+	  (protectedNs (ref 'protectedNs x))
+	  (interface (ref 'interface x))
+	  (iinit (ref 'iinit x)))
+      (write-id 'multiname name port)
+      (write-id 'multiname super_name port)
+      (write-u8 flags port)
+      (if (positive? (bitwise-and flags CONSTANT_ClassProtectedNs))
+	  (write-id 'namespace protectedNs port)
+	  '())
+      (write-list0 (lambda (x p) (write-id 'multiname x p)) interface port)
+      (write-id 'method iinit port)
+      (write-list0 write-traits_info (ref 'trait x) port)
+)))
+
+(define write-class_info
+  (lambda (x port)
+    (write-id 'method (ref 'cinit x) port)
+    (write-list0 write-traits_info (ref 'trait x) port)))
 
 ;;; metadata_info writer
 
@@ -1156,6 +1188,8 @@
 	     (method (ref 'method body))
 	     (script (ref 'script body))
 	     (method-signature (from-asm-method-signature method))
+	     (instance (ref 'instance body '()))
+	     (class (ref 'class body '()))
 	     (method_body (from-asm-method_body method))
 	     (constant (from-asm-constant dict ns_set)))
 	`(abc
@@ -1163,8 +1197,8 @@
 	  (constant_pool ,constant)
 	  (method ,method-signature)
 	  (metadata ())
-	  (instance ())
-	  (class ())
+	  (instance ,instance)
+	  (class ,class)
 	  (script ,script)
 	  (method_body ,method_body)
 	  )
