@@ -1,10 +1,10 @@
 scheme による abc アセンブラ -*- outline -*-
 
+todo: write-id read-id を使う
+todo: パラメータ一つの時 (key value) 複数の時 (key (value value ..)) に統一
 todo: gauche 対応
 todo: scheme 48 対応
-todo: クラス定義アセンブル
 todo: 関数定義引き数付き
-todo: パラメータ一つの時 (key value) 複数の時 (key (value value ..)) に統一
 
 Happy ABC で疑問の所
 stack= -arg1?

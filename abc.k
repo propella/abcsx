@@ -33,15 +33,16 @@
 
 ;;;; Primitive Data Types Reader
 
+;; Read one byte unsigned integer from the port.
 (define read-u8 read-byte)
 
-;; Two-byte unsigned integer value
+;; Read two bytes unsigned integer value from the port.
 (define read-u16 (lambda (port)
   (let ((l (read-byte port))
 	(h (read-byte port)))
     (+ (* h 256) l))))
 
-;; Variale number integer
+;; Read a variale number integer from the port.
 (define read-u32 (lambda (port)
   (let ((a (read-byte port)))
     (if (< a 128) a
@@ -58,8 +59,7 @@
 				(e  (bitwise-and (read-byte port) #x0f)))
 			    (+ (arithmetic-shift e 28) (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a))))))))))))
 
-(define read-u30 (lambda (port) ;; todo
-    (read-u32 port)))
+(define read-u30 read-u32)
 
 (define read-s24 (lambda (port)
   (let ((b0 (read-byte port))
@@ -80,8 +80,8 @@
   (let ((bx (read-bytes 8 port)))
     (floating-point-bytes->real bx #f))))
 
-(define read-id (lambda (type port)
-  `(,type ,(read-u30 port))))
+;; Read u30 from the port and construct a datum typed the type.
+(define read-id (lambda (type port) `(,type ,(read-u30 port))))
 
 ;;;; List Reader
 
@@ -140,29 +140,31 @@
 (define CONSTANT_MultinameL #x1B)
 (define CONSTANT_MultinameLA #x1C)
 
-(define multiname-attribute (lambda (x)
-  `(attribute ,x)))
+(define multiname-attribute
+  (lambda (x) `(attribute ,x)))
 
-(define read-multiname_kind_QName (lambda (port)
-  `(,(read-id 'namespace port)
-    ,(read-id 'string port))))
+(define read-multiname_kind_QName
+  (lambda (port)
+    `(,(read-id 'namespace port)
+      ,(read-id 'string port))))
 
-(define read-multiname_kind_RTQName (lambda (port)
-  (read-id 'string port)))
+(define read-multiname_kind_RTQName
+  (lambda (port) (read-id 'string port)))
 
-(define read-multiname_kind_RTQNameL (lambda (port)
-  'RTQNameL))
+(define read-multiname_kind_RTQNameL
+  (lambda (port) 'RTQNameL))
 
-(define read-multiname_kind_Multiname (lambda (port)
-  (let ((name (read-id 'string port))
-	(ns_set (read-id 'ns_set port)))
-    `(,ns_set ,name))))
+(define read-multiname_kind_Multiname
+  (lambda (port)
+    (let ((name (read-id 'string port))
+	  (ns_set (read-id 'ns_set port)))
+      `(,ns_set ,name)))) ;; Note: the order is swapped.
 
-(define read-multiname_kind_MultinameL (lambda (port)
-  `(ns_set ,(read-u30 port))))
+(define read-multiname_kind_MultinameL
+  (lambda (port) (read-id 'ns_set port)))
 
-(define transpose (lambda (dict)
-  (map (lambda (pair) (cons (cdr pair) (car pair))) dict)))
+(define transpose
+  (lambda (dict)  (map (lambda (pair) (cons (cdr pair) (car pair))) dict)))
 
 (define CONSTANT_Namespace_write (transpose CONSTANT_Namespace))
 
@@ -236,13 +238,15 @@
   
 ;;; metadata_info reader
 
-(define read-item_info (lambda (port)
-  `((key ,(read-id 'string port))
-    (value ,(read-id 'string port)))))
+(define read-item_info
+  (lambda (port)
+    `((key ,(read-id 'string port))
+      (value ,(read-id 'string port)))))
 
-(define read-metadata_info (lambda (port)
-  `((name (string ,(read-u30 port)))
-    (items ,(read-list0 read-item_info port)))))
+(define read-metadata_info
+  (lambda (port)
+    `((name ,(read-id 'string port))
+      (items ,(read-list0 read-item_info port)))))
 
 ;;; traits_info reader
 
@@ -254,27 +258,31 @@
 (define Trait_Function 5)
 (define Trait_Const 6)
 
-(define read-trait_slot (lambda (port)
-  (let* ((slot_id (read-u30 port))
-	 (type_name (read-id 'multiname port))
-	 (vindex (read-u30 port))
-	 (vkind (if (= vindex 0) 0 (read-u8 port))))
-  `((slot_id ,slot_id)
-    (type_name ,type_name)
-    (vindex ,vindex)
-    (vkind ,vkind)))))
+(define read-trait_slot
+  (lambda (port)
+    (let* ((slot_id (read-u30 port))
+	   (type_name (read-id 'multiname port))
+	   (vindex (read-u30 port))
+	   (vkind (if (= vindex 0) 0 (read-u8 port))))
+      `((slot_id ,slot_id)
+	(type_name ,type_name)
+	(vindex ,vindex)
+	(vkind ,vkind)))))
 
-(define read-trait_class (lambda (port)
-  `((slot_id ,(read-u30 port))
-    (classi (class ,(read-u30 port))))))
+(define read-trait_class
+  (lambda (port)
+    `((slot_id ,(read-u30 port))
+      (classi ,(read-id 'class port)))))
 
-(define read-trait_function (lambda (port)
-  `((slot_id ,(read-u30 port))
-    (function ,(read-u30 port)))))
+(define read-trait_function
+  (lambda (port)
+    `((slot_id ,(read-u30 port))
+      (function ,(read-u30 port)))))
 
-(define read-trait_method (lambda (port)
-  `((disp_id ,(read-u30 port))
-    (method ,(read-u30 port)))))
+(define read-trait_method
+  (lambda (port)
+    `((disp_id ,(read-u30 port))
+      ,(read-id 'method port))))
   
 (define read-traits_info_data (lambda (name kind port)
   (cond
@@ -314,41 +322,39 @@
 (define CONSTANT_ClassInterface #x04)
 (define CONSTANT_ClassProtectedNs #x08)
 
-(define read-instance_info (lambda (port)
-;  (printf "pos ~a\n" (file-position port))
-  (let* ((name (read-id 'multiname port))
-	 (super_name (read-id 'multiname port))
-	 (flags (read-u8 port))
-	 (protectedNs (if (positive? (bitwise-and flags CONSTANT_ClassProtectedNs))
-			  (read-u30 port)
-			  '()))
-	 (interface (read-list0 read-u30 port))
-	 (iinit (read-u30 port))
-	 (trait (read-list0 read-traits_info port)))
-    `((name ,name)
-      (super_name ,super_name)
-      (flags ,flags)
-      (protectedNs (namespace ,protectedNs))
-      (interface ,(map (lambda (i) `(multiname ,i)) interface))
-      (iinit (method ,iinit))
-      (trait ,trait)
-      ))))
+(define read-instance_info
+  (lambda (port)
+    (let* ((name (read-id 'multiname port))
+	   (super_name (read-id 'multiname port))
+	   (flags (read-u8 port))
+	   (protectedNs (if (positive? (bitwise-and flags CONSTANT_ClassProtectedNs))
+			    (read-u30 port)
+			    '()))
+	   (interface (read-list0 read-u30 port))
+	   (iinit (read-id 'method port))
+	   (trait (read-list0 read-traits_info port)))
+      `((name ,name)
+	(super_name ,super_name)
+	(flags ,flags)
+	(protectedNs (namespace ,protectedNs))
+	(interface ,(map (lambda (i) `(multiname ,i)) interface))
+	(iinit ,iinit)
+	(trait ,trait)
+	))))
 
 ;;; class_info reader
 
-(define read-class_info (lambda (port)
-  (let ((cinit (read-u30 port))
-	(trait (read-list0 read-traits_info port)))
-    `((cinit (method ,cinit))
-      (trait ,trait)))))
+(define read-class_info
+  (lambda (port)
+    `((cinit ,(read-id 'method port))
+      (trait ,(read-list0 read-traits_info port)))))
 
 ;;; script_info reader
 
-(define read-script_info (lambda (port)
-  (let ((init (read-id 'method port))
-	(trait (read-list0 read-traits_info port)))
-    `((init ,init)
-      (trait ,trait)))))
+(define read-script_info
+  (lambda (port)
+    `((init ,(read-id 'method port))
+      (trait ,(read-list0 read-traits_info port)))))
 
 ;;; code reader
 
@@ -447,12 +453,13 @@
   (let ((code-port (open-input-bytes code)))
     (read-instructions code-port))))
 
-(define read-exception_info (lambda (port)
-  `((from ,(read-u30 port))
-    (to ,(read-u30 port))
-    (target ,(read-u30 port))
-    (exc_type (string ,(read-u30 port)))
-    (var_name (string ,(read-u30 port))))))
+(define read-exception_info
+  (lambda (port)
+    `((from ,(read-u30 port))
+      (to ,(read-u30 port))
+      (target ,(read-u30 port))
+      (exc_type ,(read-id 'string port))
+      (var_name ,(read-id 'string port)))))
 
 ;;; method_body_info reader
 
@@ -643,12 +650,9 @@
     (write-byte b1 port))))
 
 (define write-s32 write-u32)
+(define write-u30 write-u32)
 
-(define write-u30 (lambda (i port)
-  (write-u32 i port)))
-
-
-;; Make sure if the type is correct and write the index.
+;; Write u30 index with making sure if the type is correct and write the index.
 (define write-id (lambda (type x port)
   (cond
    ((not (pair? x)) (error (format "Type error, expect: (~a i) given: ~a" type x)))
@@ -743,9 +747,9 @@
   (let* ((param_type (ref 'param_type x))
 	 (param_count (length param_type)))
     (write-u30 param_count port)
-    (write-u30 (cadr (ref 'return_type x)) port)
+    (write-id 'multiname (ref 'return_type x) port)
     (for-each (lambda (type) (write-id 'multiname type port)) param_type) ;todo
-    (write-u30 (cadr (ref 'name x)) port)
+    (write-id 'string (ref 'name x) port)
     (write-u8 (ref 'flags x) port)
     (if (method-info-HAS_OPTIONAL (ref 'flags x)) (error "HAS_OPTIONAL is not supported yet") '()) ;todo
     (if (method-info-HAS_PARAM_NAMES (ref 'flags x)) (error "HAS_OPTIONAL is not supported yet") '()) ;todo
@@ -823,23 +827,22 @@
 
 ;;; metadata_info writer
 
-(define write-item_info (lambda (x port)
-  (let ((key (cadr (ref 'key x)))
-	(value (cadr (ref 'value x))))
-    (write-u30 key port)
-    (write-u30 value port))))
+(define write-item_info
+  (lambda (x port)
+    (write-id 'string (ref 'key x) port)
+    (write-id 'string (ref 'value x) port)))
 
-(define write-metadata_info (lambda (x port)
-  (let ((name (cadr (ref 'name x)))
-	(items (ref 'items x)))
-    (write-u30 name port)
-    (write-list0 write-item_info items port))))
-  
+(define write-metadata_info
+  (lambda (x port)
+    (write-id 'string (ref 'name x) port)
+    (write-list0 write-item_info (ref 'items x) port)))
+
 ;;; script_info writer
 
-(define write-script_info (lambda (x port)
-  (write-u30 (cadr (ref 'init x)) port)
-  (write-list0 write-traits_info (ref 'trait x) port)))
+(define write-script_info
+  (lambda (x port)
+    (write-id 'method (ref 'init x) port)
+    (write-list0 write-traits_info (ref 'trait x) port)))
 
 ;;; code writer
 

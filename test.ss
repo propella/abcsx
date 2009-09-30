@@ -276,6 +276,9 @@
 (roundtrip-check write-class_info read-class_info
 		 '((cinit (method 0)) (trait ())))
 
+(roundtrip-check write-script_info read-script_info
+		 '((init (method 0)) (trait ())))
+
 ;;; Jump reader
 
 (check (find-label-new 10 '()) => '(10))
