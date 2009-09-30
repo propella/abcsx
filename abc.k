@@ -37,73 +37,80 @@
 (define read-u8 read-byte)
 
 ;; Read two bytes unsigned integer value from the port.
-(define read-u16 (lambda (port)
-  (let ((l (read-byte port))
-	(h (read-byte port)))
-    (+ (* h 256) l))))
+(define read-u16
+  (lambda (port)
+    (let ((l (read-byte port))
+	  (h (read-byte port)))
+      (+ (* h 256) l))))
 
 ;; Read a variale number integer from the port.
-(define read-u32 (lambda (port)
-  (let ((a (read-byte port)))
-    (if (< a 128) a
-	(let ((a (bitwise-and a #x7f))
-	      (b (read-byte port)))
-	  (if (< b 128) (+ (arithmetic-shift b 7) a)
-	      (let ((b (bitwise-and b #x7f))
-		    (c  (read-byte port)))
-		(if (< c 128) (+ (arithmetic-shift c 14) (arithmetic-shift b 7) a)
-		    (let ((c (bitwise-and c #x7f))
-			  (d  (read-byte port)))
-		      (if (< d 128) (+ (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a)
-			  (let ((d (bitwise-and d #x7f))
-				(e  (bitwise-and (read-byte port) #x0f)))
-			    (+ (arithmetic-shift e 28) (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a))))))))))))
+(define read-u32
+  (lambda (port)
+    (let ((a (read-byte port)))
+      (if (< a 128) a
+	  (let ((a (bitwise-and a #x7f))
+		(b (read-byte port)))
+	    (if (< b 128) (+ (arithmetic-shift b 7) a)
+		(let ((b (bitwise-and b #x7f))
+		      (c  (read-byte port)))
+		  (if (< c 128) (+ (arithmetic-shift c 14) (arithmetic-shift b 7) a)
+		      (let ((c (bitwise-and c #x7f))
+			    (d  (read-byte port)))
+			(if (< d 128) (+ (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a)
+			    (let ((d (bitwise-and d #x7f))
+				  (e  (bitwise-and (read-byte port) #x0f)))
+			      (+ (arithmetic-shift e 28) (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a))))))))))))
 
 (define read-u30 read-u32)
 
-(define read-s24 (lambda (port)
-  (let ((b0 (read-byte port))
-	(b1 (read-byte port))
-	(b2 (read-byte port)))
-    (if (positive? (bitwise-and b2 #b10000000))
-	(+ (* b2 #x10000) (* b1 #x100) b0 #x-1000000)
-	(+ (* b2 #x10000) (* b1 #x100) b0)))))
+(define read-s24
+  (lambda (port)
+    (let ((b0 (read-byte port))
+	  (b1 (read-byte port))
+	  (b2 (read-byte port)))
+      (if (positive? (bitwise-and b2 #b10000000))
+	  (+ (* b2 #x10000) (* b1 #x100) b0 #x-1000000)
+	  (+ (* b2 #x10000) (* b1 #x100) b0)))))
 
-(define read-s32 (lambda (port)
+(define read-s32
+  (lambda (port)
     (let ((u32 (read-u32 port)))
       (if (< u32 #x80000000)
 	  u32
 	  (- u32 #x100000000)))))
 
 ;; 8-byte IEEE-754 floating point value.
-(define read-d64 (lambda (port)
-  (let ((bx (read-bytes 8 port)))
-    (floating-point-bytes->real bx #f))))
+(define read-d64
+  (lambda (port) (floating-point-bytes->real (read-bytes 8 port) #f)))
 
 ;; Read u30 from the port and construct a datum typed the type.
-(define read-id (lambda (type port) `(,type ,(read-u30 port))))
+(define read-id
+  (lambda (type port) `(,type ,(read-u30 port))))
 
 ;;;; List Reader
 
 ;; Read entries by func. The count is the number of entries plus one.
-(define read-list1 (lambda (func port)
-  (let ((count (read-u30 port)))
-    (if (= count 0)
-	'()
-	(build-list (- count 1) (lambda (_) (func port)))))))
+(define read-list1
+  (lambda (func port)
+    (let ((count (read-u30 port)))
+      (if (= count 0)
+	  '()
+	  (build-list (- count 1) (lambda (_) (func port)))))))
 
 ;; Read entries by func. The count is the number of entries.
-(define read-list0 (lambda (func port)
-  (let ((count (read-u30 port)))
-    (build-list count (lambda (_) (func port))))))
+(define read-list0
+  (lambda (func port)
+    (let ((count (read-u30 port)))
+      (build-list count (lambda (_) (func port))))))
 
 ;;;; Constant Pool Reader
 
 ;;; string_info reader
 
-(define read-string_info (lambda (port)
-  (let ((size (read-u30 port)))
-    (bytes->string/utf-8 (read-bytes size port)))))
+(define read-string_info
+  (lambda (port)
+    (let ((size (read-u30 port)))
+      (bytes->string/utf-8 (read-bytes size port)))))
 
 ;;; namespace_info reader
 
@@ -210,32 +217,33 @@
 (define	method-info-SET_DXNS        (lambda (flags) (positive? (bitwise-and flags #x40))))
 (define	method-info-HAS_PARAM_NAMES (lambda (flags) (positive? (bitwise-and flags #x80))))
 
-(define read-option_detail (lambda (port) ; todo
-  `((val ,(read-u30 port))
-    (kind ,(read-u8 port)))))
+(define read-option_detail ; todo
+  (lambda (port) 
+    `((val ,(read-u30 port))
+      (kind ,(read-u8 port)))))
 
-(define read-option_info (lambda (port)
-  (read-list0 read-option_detail port)))
+(define read-option_info
+  (lambda (port) (read-list0 read-option_detail port)))
 
-(define read-param_info (lambda (param_count port)
-  (build-list param_count (lambda (_) (read-u30 port)))))
+(define read-param_info
+  (lambda (param_count port) (build-list param_count (lambda (_) (read-u30 port)))))
 
-(define read-method_info (lambda (port)
-  (let* ((param_count (read-u30 port))
-	 (return_type (read-id 'multiname port))
-	 (param_type (build-list param_count (lambda (_) (read-id 'multiname port))))
-	 (name (read-id 'string port))
-	 (flags (read-u8 port))
-	 (options (if (method-info-HAS_OPTIONAL flags) (read-option_info port) '()))
-	 (param_names (if (method-info-HAS_PARAM_NAMES flags) (read-param_info param_count port) '()))
-	 )
-    `((return_type ,return_type)
-      (param_type ,param_type)
-      (name ,name)
-      (flags ,flags)
-      (options ,options)
-      (param_names ,param_names)))))
-  
+(define read-method_info
+  (lambda (port)
+    (let* ((param_count (read-u30 port))
+	   (return_type (read-id 'multiname port))
+	   (param_type (build-list param_count (lambda (_) (read-id 'multiname port))))
+	   (name (read-id 'string port))
+	   (flags (read-u8 port))
+	   (options (if (method-info-HAS_OPTIONAL flags) (read-option_info port) '()))
+	   (param_names (if (method-info-HAS_PARAM_NAMES flags) (read-param_info param_count port) '())))
+      `((return_type ,return_type)
+	(param_type ,param_type)
+	(name ,name)
+	(flags ,flags)
+	(options ,options)
+	(param_names ,param_names)))))
+
 ;;; metadata_info reader
 
 (define read-item_info
@@ -315,6 +323,9 @@
       ,@others
       (metadata ,metadata)))))
 
+(define read-traits_info*
+  (lambda (port) (read-list0 read-traits_info port)))
+
 ;;; instance_info reader
 
 (define CONSTANT_ClassSealed #x01)
@@ -332,7 +343,7 @@
 			    '()))
 	   (interface (read-list0 read-u30 port))
 	   (iinit (read-id 'method port))
-	   (trait (read-list0 read-traits_info port)))
+	   (trait (read-traits_info* port)))
       `((name ,name)
 	(super_name ,super_name)
 	(flags ,flags)
@@ -347,111 +358,119 @@
 (define read-class_info
   (lambda (port)
     `((cinit ,(read-id 'method port))
-      (trait ,(read-list0 read-traits_info port)))))
+      (trait ,(read-traits_info* port)))))
 
 ;;; script_info reader
 
 (define read-script_info
   (lambda (port)
     `((init ,(read-id 'method port))
-      (trait ,(read-list0 read-traits_info port)))))
+      (trait ,(read-traits_info* port)))))
 
 ;;; code reader
 
 ;; make a label from label symbol list and offset.
-(define label-from-list (lambda (destination labels)
-  (let ((found (memq destination labels)))
-    (if found
-	(string->symbol (string-append "L" (number->string (length found))))
-	#f))))
+(define label-from-list
+  (lambda (destination labels)
+    (let ((found (memq destination labels)))
+      (if found
+	  (string->symbol (string-append "L" (number->string (length found))))
+	  #f))))
 
-(define destination-from-args (lambda (xs)
-  (if (and (not (null? xs))
-	   (pair? (car xs))
-	   (eq? (car (car xs)) 'offset))
-      (cadr (car xs))
-      #f)))
+(define destination-from-args
+  (lambda (xs)
+    (if (and (not (null? xs))
+	     (pair? (car xs))
+	     (eq? (car (car xs)) 'offset))
+	(cadr (car xs))
+	#f)))
 
 ;; Extract and insert jump labels
-(define insert-label (lambda (code labels)
-  (if (null? code)
-      '()
-      (let* ((line (car code))
-	     (pos (car line))
-	     (inst (cadr line))
-	     (args (cddr line))
-	     (destination (destination-from-args args))
-	     (*line (if destination
-			`(,pos ,inst ,(label-from-list destination labels))
-			line))
-	     (dst-label (label-from-list pos labels))
-	     (more (cons *line (insert-label (cdr code) labels))))
-	(if dst-label
-	    (cons dst-label more)
-	    more))
-)))
+(define insert-label
+  (lambda (code labels)
+    (if (null? code)
+	'()
+	(let* ((line (car code))
+	       (pos (car line))
+	       (inst (cadr line))
+	       (args (cddr line))
+	       (destination (destination-from-args args))
+	       (*line (if destination
+			  `(,pos ,inst ,(label-from-list destination labels))
+			  line))
+	       (dst-label (label-from-list pos labels))
+	       (more (cons *line (insert-label (cdr code) labels))))
+	  (if dst-label
+	      (cons dst-label more)
+	      more))
+	)))
 
 ;; label
 
-(define find-label-new (lambda (pos labels)
-  (if (memq pos labels)
-      labels
-      (cons pos labels))))
+(define find-label-new
+  (lambda (pos labels)
+    (if (memq pos labels)
+	labels
+	(cons pos labels))))
 
-(define *find-label (lambda (line labels)
-  (let* ((args (cddr line))
-	 (offset (destination-from-args args)))
-    (if offset
-	(find-label-new offset labels)
-	labels))))
+(define *find-label
+  (lambda (line labels)
+    (let* ((args (cddr line))
+	   (offset (destination-from-args args)))
+      (if offset
+	  (find-label-new offset labels)
+	  labels))))
 
 ;; Return all jump addreses in reverse order
 ;; The result numbers are used for label index. For example,
 ;; 3 in (3 4 5) is L2 because 3 is the third in reverse order.
-(define find-label (lambda (code)
-  (foldl *find-label '() code)))
+(define find-label
+  (lambda (code) (foldl *find-label '() code)))
 
 ;; instruction reader
 
-(define read-arguments (lambda (spec pos port)
-  (let ((opname (car spec))
-	(types (cdr spec)))
-    (let ((args (map (lambda (type)
-		       (cond
-			((eq? type 'u8) (read-u8 port))
-			((eq? type 'offset)
-			 `(offset ,(+ 4 pos (read-s24 port))))
-			((eq? type 's24) (read-s24 port))
-			((eq? type 'u30) (read-u30 port))
-			((eq? type 'register) (read-u30 port))
-			((eq? type 'integer) (read-id 'integer port))
-			((eq? type 'uinteger) (read-id 'uinteger port))
-			((eq? type 'double) (read-id 'double port))
-			((eq? type 'string) (read-id 'string port))
-			((eq? type 'multiname) (read-id 'multiname port))
-			((eq? type 'method) (read-id 'method port))
-			(else (error (format "unknown param type ~a" type)))))
-		     types)))
-      `(,pos ,opname ,@args)))))
+(define read-arguments
+  (lambda (spec pos port)
+    (let ((opname (car spec))
+	  (types (cdr spec)))
+      (let ((args (map (lambda (type)
+			 (cond
+			  ((eq? type 'u8) (read-u8 port))
+			  ((eq? type 'offset)
+			   `(offset ,(+ 4 pos (read-s24 port))))
+			  ((eq? type 's24) (read-s24 port))
+			  ((eq? type 'u30) (read-u30 port))
+			  ((eq? type 'register) (read-u30 port))
+			  ((eq? type 'integer) (read-id 'integer port))
+			  ((eq? type 'uinteger) (read-id 'uinteger port))
+			  ((eq? type 'double) (read-id 'double port))
+			  ((eq? type 'string) (read-id 'string port))
+			  ((eq? type 'multiname) (read-id 'multiname port))
+			  ((eq? type 'method) (read-id 'method port))
+			  (else (error (format "unknown param type ~a" type)))))
+		       types)))
+	`(,pos ,opname ,@args)))))
 
-(define read-instruction (lambda (decoded port)
-  (let ((pos (file-position port))
-	(inst (read-byte port)))
-    (if (eof-object? inst)
-	decoded
-	(let ((spec (hash-ref read-instruction-map inst)))
-	  (read-instruction
-;	   (cons (dprint (read-arguments spec pos port)) decoded) port)))))
-	   (cons (read-arguments spec pos port) decoded) port))))))
+(define read-instruction
+  (lambda (decoded port)
+    (let ((pos (file-position port))
+	  (inst (read-byte port)))
+      (if (eof-object? inst)
+	  decoded
+	  (let ((spec (hash-ref read-instruction-map inst)))
+	    (read-instruction
+	     (cons (read-arguments spec pos port) decoded) port))))))
 
-(define read-instructions (lambda (port)
-  (let* ((code (reverse (read-instruction '() port)))
-	 (labels (find-label code)))
-    (insert-label code labels))))
+(define read-instructions
+  (lambda (port)
+    (let* ((code (reverse (read-instruction '() port)))
+	   (labels (find-label code)))
+      (insert-label code labels))))
 
-(define decode-instructions (lambda (code)
-  (let ((code-port (open-input-bytes code)))
-    (read-instructions code-port))))
+(define decode-instructions
+  (lambda (code)
+    (let ((code-port (open-input-bytes code)))
+      (read-instructions code-port))))
 
 (define read-exception_info
   (lambda (port)
@@ -463,139 +482,148 @@
 
 ;;; method_body_info reader
 
-(define read-method_body_info (lambda (port)
-  (let* ((method (read-u30 port))
-	(max_stack (read-u30 port))
-	(local_count (read-u30 port))
-	(init_scope_depth (read-u30 port))
-	(max_scope_depth (read-u30 port))
-	(code_length (read-u30 port))
-	(code (read-bytes code_length port))
-	(exception (read-list0 read-exception_info port))
-	(trait (read-list0 read-traits_info port)))
-    `((method ,method)
-      (max_stack ,max_stack)
-      (local_count ,local_count)
-      (init_scope_depth ,init_scope_depth)
-      (max_scope_depth ,max_scope_depth)
-      (code ,(decode-instructions code))
-      (exception ,exception)
-      (trait ,trait)))))
+(define read-method_body_info
+  (lambda (port)
+    (let* ((method (read-u30 port))
+	   (max_stack (read-u30 port))
+	   (local_count (read-u30 port))
+	   (init_scope_depth (read-u30 port))
+	   (max_scope_depth (read-u30 port))
+	   (code_length (read-u30 port))
+	   (code (read-bytes code_length port))
+	   (exception (read-list0 read-exception_info port))
+	   (trait (read-traits_info* port)))
+      `((method ,method)
+	(max_stack ,max_stack)
+	(local_count ,local_count)
+	(init_scope_depth ,init_scope_depth)
+	(max_scope_depth ,max_scope_depth)
+	(code ,(decode-instructions code))
+	(exception ,exception)
+	(trait ,trait)))))
 
 ;;; abcFile reader
 
-(define read-abc (lambda (port)
-  (let* ((minor_version (read-u16 port))
-	 (major_version (read-u16 port))
-	 (constant_pool (read-cpool_info port))
-	 (method (read-list0 read-method_info port))
-	 (metadata (read-list0 read-metadata_info port))
-	 (class_count (read-u30 port))
-	 (instance (build-list class_count (lambda (_) (read-instance_info port))))
-	 (class (build-list class_count (lambda (_) (read-class_info port))))
-	 (script (read-list0 read-script_info port))
-	 (method_body (read-list0 read-method_body_info port))
-	 )
-    `(abc
-      (minor_version ,minor_version)
-      (major_version ,major_version)
-      (constant_pool ,constant_pool)
-      (method ,method)
-      (metadata ,metadata)
-      (instance ,instance)
-      (class ,class)
-      (script ,script)
-      (method_body ,method_body)))))
+(define read-abc
+  (lambda (port)
+    (let* ((minor_version (read-u16 port))
+	   (major_version (read-u16 port))
+	   (constant_pool (read-cpool_info port))
+	   (method (read-list0 read-method_info port))
+	   (metadata (read-list0 read-metadata_info port))
+	   (class_count (read-u30 port))
+	   (instance (build-list class_count (lambda (_) (read-instance_info port))))
+	   (class (build-list class_count (lambda (_) (read-class_info port))))
+	   (script (read-list0 read-script_info port))
+	   (method_body (read-list0 read-method_body_info port))
+	   )
+      `(abc
+	(minor_version ,minor_version)
+	(major_version ,major_version)
+	(constant_pool ,constant_pool)
+	(method ,method)
+	(metadata ,metadata)
+	(instance ,instance)
+	(class ,class)
+	(script ,script)
+	(method_body ,method_body)))))
 
 ;;;;;;;;;; ASM Form Decoder ;;;;;;;;;;
 
 ;;; ASM form
 
-(define make-method-body-reference (lambda (methods method-bodies index)
-  (if (null? methods)
-      '()
-      (let* ((method-body
-	      (findf (lambda (m)
-		       (let ((id (car m))) ; The first element should be '(method id)
-			 (= (cadr id) index)))
-		     method-bodies))
-	     (method-body1 (cdr method-body)) ; remove '(method id) in the method-body
-	     (max_stack (assoc 'max_stack method-body))
-	     (local_count (assoc 'local_count method-body))
-	     (init_scope_depth (assoc 'init_scope_depth method-body))
-	     (max_scope_depth (assoc 'max_scope_depth method-body))
-	     (code (assoc 'code method-body))
-	     (exception (assoc 'exception method-body))
-	     (trait (assoc 'trait method-body))
-	     (method `((signature ,(car methods))
-		       (hint (,max_stack ,local_count ,init_scope_depth ,max_scope_depth))
-		       ,code
-		       ,trait
-		       ,exception)))
-	(cons method
-	      (make-method-body-reference (cdr methods) method-bodies (+ index 1)))))))
+(define make-method-body-reference
+  (lambda (methods method-bodies index)
+    (if (null? methods)
+	'()
+	(let* ((method-body
+		(findf (lambda (m)
+			 (let ((id (car m))) ; The first element should be '(method id)
+			   (= (cadr id) index)))
+		       method-bodies))
+	       (method-body1 (cdr method-body)) ; remove '(method id) in the method-body
+	       (max_stack (assoc 'max_stack method-body))
+	       (local_count (assoc 'local_count method-body))
+	       (init_scope_depth (assoc 'init_scope_depth method-body))
+	       (max_scope_depth (assoc 'max_scope_depth method-body))
+	       (code (assoc 'code method-body))
+	       (exception (assoc 'exception method-body))
+	       (trait (assoc 'trait method-body))
+	       (method `((signature ,(car methods))
+			 (hint (,max_stack ,local_count ,init_scope_depth ,max_scope_depth))
+			 ,code
+			 ,trait
+			 ,exception)))
+	  (cons method
+		(make-method-body-reference (cdr methods) method-bodies (+ index 1)))))))
 
-; For some reason, a method_body refers a method instead of the other way.
-; So I have to make reverse reference by my hand.
-(define set-method-body (lambda (abc)
-  (let* ((method (assoc 'method abc))
-	 (method-bodies (cadr (assoc 'method_body abc)))
-	 (methods (make-method-body-reference (cadr method) method-bodies 0)))
-    (map (lambda (tag)
-	   (if (eq? (car tag) 'method) `(method ,methods)
-	       tag))
-	 abc))))
+;; For some reason, a method_body refers a method instead of the other way.
+;; So I have to make reverse reference by my hand.
+(define set-method-body
+  (lambda (abc)
+    (let* ((method (assoc 'method abc))
+	   (method-bodies (cadr (assoc 'method_body abc)))
+	   (methods (make-method-body-reference (cadr method) method-bodies 0)))
+      (map (lambda (tag)
+	     (if (eq? (car tag) 'method) `(method ,methods)
+		 tag))
+	   abc))))
 
-; find one-base index from the constant pool
-(define find-constant (lambda (type id default abc)
-  (let* ((pool (cadr (assoc 'constant_pool abc)))
-	 (table (cadr (assoc type pool))))
-    (if (zero? id)
-	default
-	(decode-id (list-ref table (- id 1)) abc)))))
+;; find one-base index from the constant pool
+(define find-constant
+  (lambda (type id default abc)
+    (let* ((pool (cadr (assoc 'constant_pool abc)))
+	   (table (cadr (assoc type pool))))
+      (if (zero? id)
+	  default
+	  (decode-id (list-ref table (- id 1)) abc)))))
 
-(define constant-id? (lambda (e)
-  (and (pair? e)
-       (symbol? (car e))
-       (pair? (cdr e))
-       (number? (cadr e)))))
-  
+(define constant-id?
+  (lambda (e)
+    (and (pair? e)
+	 (symbol? (car e))
+	 (pair? (cdr e))
+	 (number? (cadr e)))))
+
 ;;; Convert index expression to the literal
 ;;; (string 1) => "hello"
 
-(define decode-id (lambda (e abc)
-  (if (pair? e)
-      (if (constant-id? e)
-	  (let ((key (car e))
-		(id (cadr e)))
-	    (cond
-	     ((eq? key 'integer) (find-constant 'integer id 0 abc))
-	     ((eq? key 'uinteger) (find-constant 'uinteger id 0 abc))
-	     ((eq? key 'double) (find-constant 'double id 0.0 abc))
-	     ((eq? key 'string) (find-constant 'string id '* abc))
-	     ((eq? key 'namespace) (find-constant 'namespace id '* abc)) ; ???
-	     ((eq? key 'multiname) (find-constant 'multiname id '* abc)) ; ???
-;	     ((eq? key 'method) (find-element 'method id abc))
-	     (else (cons (decode-id (car e) abc) (decode-id (cdr e) abc)))))
-	  (cons (decode-id (car e) abc) (decode-id (cdr e) abc)))
-      e)))
+(define decode-id
+  (lambda (e abc)
+    (if (pair? e)
+	(if (constant-id? e)
+	    (let ((key (car e))
+		  (id (cadr e)))
+	      (cond
+	       ((eq? key 'integer) (find-constant 'integer id 0 abc))
+	       ((eq? key 'uinteger) (find-constant 'uinteger id 0 abc))
+	       ((eq? key 'double) (find-constant 'double id 0.0 abc))
+	       ((eq? key 'string) (find-constant 'string id '* abc))
+	       ((eq? key 'namespace) (find-constant 'namespace id '* abc)) ; ???
+	       ((eq? key 'multiname) (find-constant 'multiname id '* abc)) ; ???
+	       ;; ((eq? key 'method) (find-element 'method id abc))
+	       (else (cons (decode-id (car e) abc) (decode-id (cdr e) abc)))))
+	    (cons (decode-id (car e) abc) (decode-id (cdr e) abc)))
+	e)))
 
 ; find zero-base index from a body
-(define find-element (lambda (type id abc)
-  (let* ((pool abc)
-	 (table (cadr (assoc type pool))))
-    (decode-id (list-ref table id) abc))))
+(define find-element
+  (lambda (type id abc)
+    (let* ((pool abc)
+	   (table (cadr (assoc type pool))))
+      (decode-id (list-ref table id) abc))))
 
-(define to-asm (lambda (abc)
-  (let* ((*abc (set-method-body (cdr abc)))
-	 (**abc (decode-id *abc *abc))
-	 (cpool (assoc 'constant_pool **abc))
-	 (ns_set (assoc 'ns_set (cadr cpool)))
-	 (method (assoc 'method **abc))
-	 (instance (assoc 'instance **abc))
-	 (class (assoc 'class **abc))
-	 (script (assoc 'script **abc)))
-    (list 'asm ns_set method instance class script))))
+(define to-asm
+  (lambda (abc)
+    (let* ((*abc (set-method-body (cdr abc)))
+	   (**abc (decode-id *abc *abc))
+	   (cpool (assoc 'constant_pool **abc))
+	   (ns_set (assoc 'ns_set (cadr cpool)))
+	   (method (assoc 'method **abc))
+	   (instance (assoc 'instance **abc))
+	   (class (assoc 'class **abc))
+	   (script (assoc 'script **abc)))
+      (list 'asm ns_set method instance class script))))
 
 ;;;;;;;;;; ABC Form Writer ;;;;;;;;;;
 
@@ -652,12 +680,13 @@
 (define write-s32 write-u32)
 (define write-u30 write-u32)
 
-;; Write u30 index with making sure if the type is correct and write the index.
-(define write-id (lambda (type x port)
-  (cond
-   ((not (pair? x)) (error (format "Type error, expect: (~a i) given: ~a" type x)))
-   ((eq? type (car x)) (write-u30 (cadr x) port))
-   (else (error (format "Type error, expect: (~a i) given: ~a" type x))))))
+;; Write a u30 index with making sure if the type is correct and write the index.
+(define write-id
+  (lambda (type x port)
+    (cond
+     ((not (pair? x)) (error (format "Type error, expect: (~a i) given: ~a" type x)))
+     ((eq? type (car x)) (write-u30 (cadr x) port))
+     (else (error (format "Type error, expect: (~a i) given: ~a" type x))))))
 
 ;;; List Writer
 
