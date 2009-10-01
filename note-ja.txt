@@ -17,6 +17,13 @@ CallProperty   of Cpool.multiname * int: op=0x46; stack= 1-arg1; const=[entry ar
 http://home.earthlink.net/~krautj/sassy/sassy.html
 
 
+* ローカルファイル？
+
+FileReference
+load():void; 
+save(data:*, defaultFileName:String = null):void;
+
+* sassy で遊ぶ
 
 * リストのある項目を (key value value ..) にする
 

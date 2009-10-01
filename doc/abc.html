@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>An Assembler for AVM2 using S-Expression</title>
+<meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+<style type="text/css">
+/*<![CDATA[*/
+/* body { margin: 1em 3em 1em 3em; } */
+
+ div.c1 {text-align: center}
+ pre {
+/*  border: solid 1px; */
+  padding: 1em;
+  margin-left: 2em;
+ }
+
+/*]]>*/
+</style>
+</head>
+<body>
+<div class="c1">
+<h1>An Assembler for AVM2 using S-Expression</h1>
+<p>Takashi Yamamiya</p>
+<p><address>takashi@vpri.org</address></p>
+<p>2009-10-01</p>
+</div>
+<h2>Overview</h2>
+<p>ABCSX is an assembler and disassember for the ActionScript
+Virtual Machine 2 (AVM2) and the ActionScript Byte Code (ABC). It
+runs on both Cola/Amino language and PLT-Shcheme. The syntax
+consists of s-expressions and a program can be constructed with
+normal list operations in Scheme like language. The goal of this
+utility is to build a high level language running on AVM2 and Adobe
+Flash Player. To get the idea, "Hello World!" programs for both and
+abcasm (a standard assembler utility consisted in the AVM2 source
+tree) are shown.</p>
+<pre>
+;;;; A "Hello World!" program in ABCSX ASM form
+(asm
+ (method
+  (((signature
+     ((return_type *) (param_type ()) (name "hello")
+      (flags 0) (options ()) (param_names ())))
+    (code
+     ((getlocal 0)
+      (pushscope)
+      (findpropstrict ((package "") "print"))
+      (pushstring "Hello, World!!")
+      (callproperty ((package "") "print") 1)
+      (returnvoid))))))
+ (script (((init (method 0)) (trait ())))))
+</pre>
+<pre>
+// A "Hello world World!" program in abcasm
+function hello():*
+{
+    getlocal 0
+    pushscope
+    findpropstrict print
+    pushstring "Hello, World!!"
+    callproperty print (1)
+    returnvoid
+}
+</pre>
+
+<p>Although a program written in abcasm syntax is more concise than
+ABCSX, semantics of the program is ambiguous. For example, in spite of
+each name (symbol) in ABC belongs to namespace(s), but the syntax of
+abcasm doesn't describe it clearly. In this case, "print" is
+interpreted to a Multiple Namespace Name with a namespace set
+including PackageNamespace with no name.  This is good for writing a
+program by human, but not necessary for a machine generated
+code. ABCSX rather takes a direction toward verbose but unambiguous
+style.</p>
+
+<p>ABCSX offers two forms of syntax. ASM form is higher level
+syntax introduced above. ABC form is identical to an abstract
+syntax tree of ABC binary file. This is useful for debugging.</p>
+
+<pre>
+(abc
+ (minor_version 16)
+ (major_version 46)
+ (constant_pool
+  ((integer ())
+   (uinteger ())
+   (double ())
+   (string ("hello" "" "print" "Hello, World!!"))
+   (namespace ((package (string 2))))
+   (ns_set ())
+   (multiname (((namespace 1) (string 3))))))
+ (method (((return_type (multiname 0)) (param_type ())
+           (name (string 1)) (flags 0) (options ()) (param_names ()))))
+ (metadata ())
+ (instance ())
+ (class ())
+ (script (((init (method 0)) (trait ()))))
+ (method_body
+  (((method 0) (max_stack 2) (local_count 1)
+               (init_scope_depth 0) (max_scope_depth 1)
+    (code
+     ((getlocal 0)
+      (pushscope)
+      (findpropstrict (multiname 1))
+      (pushstring (string 4))
+      (callproperty (multiname 1) 1)
+      (returnvoid)))
+    (exception ())
+    (trait ())))))
+</pre>
+
+<p>Although ABC form is generated from ASM form mechanically, the
+reason of providing high level ASM form is to ease writing a compiler.
+Using ASM form, a compiler writer doesn't have to care about to
+extract a constant pool, or code hint information (AVM2 requires a
+frame information like stack size and register size used in a
+code).</p>
+
+<h2>Background</h2>
+
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-abckit - The ActionScript Byte Code assembler / disassembler in PLT Scheme
+abcsx - The ActionScript Byte Code assembler / disassembler in PLT Scheme
 
 This is a set of tools to examine Adobe's ABC format file.
 
