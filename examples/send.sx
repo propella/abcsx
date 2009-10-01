@@ -2,16 +2,16 @@
 (asm
  (method
   (((signature
-     ((return_type *) (param_type ()) (name *) (flags 0) (options ()) (param_names ())))
+     ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
     (code
-     ((_ getlocal_0)
-      (_ pushscope)
-      (_ getlex ((package "avmplus") "System"))
-      (_ pushstring "Hello ")
-      (_ callpropvoid ((package "") "write") 1)
-      (_ getlex ((package "avmplus") "System"))
-      (_ pushstring "World\n")
-      (_ callproperty ((package "") "write") 1)
-      (_ coerce_a)
-      (_ returnvalue))))))
+     ((getlocal_0)
+      (pushscope)
+      (getlex ((package "avmplus") "System"))
+      (pushstring "Hello ")
+      (callpropvoid ((package "") "write") 1)
+      (getlex ((package "avmplus") "System"))
+      (pushstring "World\n")
+      (callproperty ((package "") "write") 1)
+      (coerce_a)
+      (returnvalue))))))
  (script (((init (method 0)) (trait ())))))

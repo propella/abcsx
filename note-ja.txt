@@ -5,6 +5,7 @@ todo: パラメータ一つの時 (key value) 複数の時 (key value value ..) 
 todo: gauche 対応
 todo: scheme 48 対応
 todo: 関数定義引き数付き
+todo: signature で (name *) が指定出来ない。
 
 Happy ABC で疑問の所
 stack= -arg1?
@@ -14,6 +15,8 @@ CallProperty   of Cpool.multiname * int: op=0x46; stack= 1-arg1; const=[entry ar
 ;;(require srfi/60) ;; bitwise
 
 http://home.earthlink.net/~krautj/sassy/sassy.html
+
+
 
 * リストのある項目を (key value value ..) にする
 

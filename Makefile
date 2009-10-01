@@ -13,6 +13,7 @@ test2 :
 	./runasm.sh examples/ifte.sx
 	./runasm.sh examples/callLocal.sx
 	./runasm.sh examples/call.sx
+	./runasm.sh examples/send.sx
 
 test3 :
 	./asm.ss examples/textField.sx

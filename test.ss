@@ -444,7 +444,6 @@
 
 (check (encode-id '(package "ok") NEW-CONSTANT-DICT (lambda (x dict) x))  => '(namespace 1))
 
-
 (encode-id '(package "ok") NEW-CONSTANT-DICT
   (lambda (x dict) 
     (check x => '(namespace 1))
@@ -477,20 +476,20 @@
 ;;; code without numbers
 
 (encode-id
- '(code ((0 getlocal 0)
-	 (2 pushscope)
+ '(code ((getlocal 0)
+	 (_ pushscope)
 	 (3 findpropstrict ((ns_set 1) "print"))
 	 (5 pushstring "Hello, World!!")
 	 (7 callproperty ((package "") "print") 1)
 	 (10 returnvoid)))
  NEW-CONSTANT-DICT
  (lambda (x dict)
-   (check x => '(code ((0 getlocal 0)
-		       (2 pushscope)
-		       (3 findpropstrict (multiname 1))
-		       (5 pushstring (string 2))
-		       (7 callproperty (multiname 2) 1)
-		       (10 returnvoid))))
+   (check x => '(code ((getlocal 0)
+		       (pushscope)
+		       (findpropstrict (multiname 1))
+		       (pushstring (string 2))
+		       (callproperty (multiname 2) 1)
+		       (returnvoid))))
    (check dict => '((multiname ((namespace 1) (string 1)) ((ns_set 1) (string 1)))
 		    (namespace (package (string 3)))
 		    (string "" "Hello, World!!" "print")
@@ -516,20 +515,20 @@
 ;;; code with constant numbers
 
 (encode-id '(code (
-		   (5 pushstring "byte 9 + short 938=")
-		   (7 pushbyte 9)
+		   (pushstring "byte 9 + short 938=")
+		   (_ pushbyte 9)
 		   (9 pushshort 938)
 		   (21 pushint 3652147)
 		   (23 pushuint 2147483648)
 		   (34 pushdouble 9.391)
 		   )) NEW-CONSTANT-DICT
 		      (lambda (x dict) (check x => '(code (
-							   (5 pushstring (string 1))
-							   (7 pushbyte 9)
-							   (9 pushshort 938)
-							   (21 pushint (integer 1))
-							   (23 pushuint (uinteger 1))
-							   (34 pushdouble (double 1))
+							   (pushstring (string 1))
+							   (pushbyte 9)
+							   (pushshort 938)
+							   (pushint (integer 1))
+							   (pushuint (uinteger 1))
+							   (pushdouble (double 1))
 							   )))))
 
 ;;; From ASM
@@ -561,31 +560,30 @@
 (check (*from-asm-make-hint-eval '(1 2) '(arg 1)) => 2)
 (check (*from-asm-make-hint-eval '(1 2) '(+ 10 (arg 1))) => 12)
 
-(check (from-asm-make-hint-eval 'stack '(2 pushscope) '((stack -1) (scope 1)))
-       => -1)
+(check (from-asm-make-hint-eval 'stack '(2 pushscope) '((stack -1) (scope 1))) => -1)
+(check (from-asm-make-hint-eval 'stack '(pushscope) '((stack -1) (scope 1))) => -1)
 
-(check (from-asm-make-hint-eval 'local '(0 getlocal 4) '((stack 1) (local (arg 0))))
-       => 4)
+(check (from-asm-make-hint-eval 'local '(getlocal 4) '((stack 1) (local (arg 0)))) => 4)
+(check (from-asm-make-hint-eval 'local '(0 getlocal 4) '((stack 1) (local (arg 0)))) => 4)
 
 (check (from-asm-make-hint
 	'((signature ((return_type (multiname 0)) (param_type (* *)) (name (string 2)) (flags 0) (options ()) (param_names ())))
 	  (code ())))
        => '((max_stack 0) (local_count 3) (init_scope_depth 0) (max_scope_depth 0)))
 
-
 (check (from-asm-make-hint
 	'((signature ((return_type (multiname 0)) (param_type (* *)) (name (string 2)) (flags 0) (options ()) (param_names ())))
 	  (code
-	   ((_ getlocal 0)
-	    (_ setlocal 1)
-	    (_ getlocal 2)
-	    (_ setlocal 3)
-	    (_ getlocal 0)
-	    (_ pushscope)
-	    (_ findpropstrict ((ns_set 1) "print"))
-	    (_ pushstring "Hello, World!!")
-	    (_ callproperty ((package "") "print") 1)
-	    (_ returnvoid)))))
+	   ((getlocal 0)
+	    (setlocal 1)
+	    (getlocal 2)
+	    (setlocal 3)
+	    (getlocal 0)
+	    (pushscope)
+	    (findpropstrict ((ns_set 1) "print"))
+	    (pushstring "Hello, World!!")
+	    (callproperty ((package "") "print") 1)
+	    (returnvoid)))))
        => '((max_stack 2) (local_count 4) (init_scope_depth 0) (max_scope_depth 1)))
 
 ;; hello wolrd without hint

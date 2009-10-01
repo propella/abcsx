@@ -993,10 +993,11 @@
 	       ))
 	    spec args)))
 
+;; Write a statement to the port.
+;; A line number placeholder is already removed in write-label-replace.
 (define write-instruction
   (lambda (statement port)
-    (let* (
-	   (inst (car statement))
+    (let* ((inst (car statement))
 	   (spec (hash-ref write-instruction-map inst))
 	   (args (cdr statement)))
       (write-u8 (car spec) port)
@@ -1073,28 +1074,30 @@
 (define from-asm-method-signature (lambda (xs)
   (map (lambda (x) (ref 'signature x)) xs)))
 
-;;
+;; A tiny interpreter for hint specification
+;; (arg 0) is replaced to the value of first argument.
+;; (*from-asm-make-hint-eval '(1 2) '(+ 10 (arg 1))) => 12 (10 + the second argument)
+(define *from-asm-make-hint-eval
+  (lambda (args expr)
+    (if (pair? expr)
+	(let ((params (map (lambda (each) (*from-asm-make-hint-eval args each))
+			   (cdr expr)))
+	      (key (car expr)))
+	  (cond
+	   ((eq? key 'arg) (list-ref args (car params)))
+	   ((eq? key '+) (apply + params))
+	   ((eq? key '-) (apply - params))
+	   (else (error (format "Unknown hint definition: ~a" expr)))))
+	expr)))
 
-;;; A tiny interpreter for hint specification
-;;; (arg 0) is replaced to the value of first argument.
-(define *from-asm-make-hint-eval (lambda (args expr)
-  (if (pair? expr)
-      (let ((params (map (lambda (each) (*from-asm-make-hint-eval args each))
-			 (cdr expr)))
-	    (key (car expr)))
-	(cond
-	 ((eq? key 'arg) (list-ref args (car params)))
-	 ((eq? key '+) (apply + params))
-	 ((eq? key '-) (apply - params))
-	 (else (error (format "Unknown hint definition: ~a" expr)))))
-      expr)))
+(define from-asm-make-hint-eval
+  (lambda (key line spec)
+    (let ((expr (assoc key spec)))
+;(pretty-print expr)
 
-;;; (*from-asm-make-hint-eval '(1 2) '(+ 10 (arg 1))) => 12
-(define from-asm-make-hint-eval (lambda (key command spec)
-  (let ((expr (assoc key spec)))
-    (if expr
-	(*from-asm-make-hint-eval (cddr command) (cadr expr))
-	0))))
+      (if expr
+	  (*from-asm-make-hint-eval (cdr (get-statement line)) (cadr expr))
+	  0))))
 
 (define *from-asm-make-hint (lambda (lines stack max_stack local_count scope max_scope)
   (if (null? lines)
@@ -1104,45 +1107,47 @@
 	(max_scope_depth ,max_scope))
       (if (symbol? (car lines))
 	  (*from-asm-make-hint (cdr lines) stack max_stack local_count scope max_scope)
-	  (let* ((line (car lines))
-		 (spec (hash-ref hint-instruction-map (cadr line)))
-		 (*stack (+ stack (from-asm-make-hint-eval 'stack line spec)))
+	  (let* ((statement (get-statement (car lines)))
+		 (spec (hash-ref hint-instruction-map (car statement)))
+		 (*stack (+ stack (from-asm-make-hint-eval 'stack statement spec)))
 		 (*max_stack (max max_stack *stack))
-		 (local (from-asm-make-hint-eval 'local line spec))
+		 (local (from-asm-make-hint-eval 'local statement spec))
 		 (*local_count (max local_count local))
-		 (*scope (+ scope (from-asm-make-hint-eval 'scope line spec)))
+		 (*scope (+ scope (from-asm-make-hint-eval 'scope statement spec)))
 		 (*max_scope (max max_scope *scope)))
 	    (*from-asm-make-hint (cdr lines) *stack *max_stack *local_count *scope *max_scope))))))
 
 ;; Visit code and extract the hint information from it.
 ;; (hint ((max_stack ?) (local_count ?) (init_scope_depth 0) (max_scope_depth ?)))
-(define from-asm-make-hint (lambda (method)
-  (let* ((hint (assoc 'hint method))
-	 (signature (ref 'signature method #f))
-	 (local_count (if signature
-			  (length (ref 'param_type signature))
-			  0)))
-    (if hint
-	(cadr hint)
-	(*from-asm-make-hint (ref 'code method) 0 0 local_count 0 0)))))
+(define from-asm-make-hint
+  (lambda (method)
+    (let* ((hint (assoc 'hint method))
+	   (signature (ref 'signature method #f))
+	   (local_count (if signature
+			    (length (ref 'param_type signature))
+			    0)))
+      (if hint
+	  (cadr hint)
+	  (*from-asm-make-hint (ref 'code method) 0 0 local_count 0 0)))))
 
-(define *from-asm-method_body (lambda (xs index)
-  (if (null? xs)
-      '()
-      (let* ((method (car xs))
-	     (hint (from-asm-make-hint method))
-	     (code (ref 'code method)))
-	(cons `((method ,index)
-		,@hint
-		(code ,code)
-		(exception ())
-		(trait ()))
-	      (*from-asm-method_body (cdr xs) (add1 index)))))))
+(define *from-asm-method_body
+  (lambda (xs index)
+    (if (null? xs)
+	'()
+	(let* ((method (car xs))
+	       (hint (from-asm-make-hint method))
+	       (code (ref 'code method)))
+	  (cons `((method ,index)
+		  ,@hint
+		  (code ,code)
+		  (exception ())
+		  (trait ()))
+		(*from-asm-method_body (cdr xs) (add1 index)))))))
 
 ;; Extract method_bodies from list of method (signature + body)
 ;; Each method has its index for the signature like (method 1)
-(define from-asm-method_body (lambda (xs)
-  (*from-asm-method_body xs 0)))
+(define from-asm-method_body
+  (lambda (xs) (*from-asm-method_body xs 0)))
 
 ;;; encode-id
 
@@ -1179,6 +1184,7 @@
 (define multiname-id? (lambda (x)
   (and (pair? x) ; maybe unnecessary
        (pair? (car x))
+       (eq? (length (car x)) 2)
        (number? (cadr (car x)))
        (or (eq? (car (car x)) 'namespace)
 	   (eq? (car (car x)) 'ns_set)))))
@@ -1198,24 +1204,19 @@
   (if (symbol? x)
       (cont x dict)
       (let* ((pos (car x))
-	     (symcode (cadr x))
-	     (values (cddr x))
+	     (statement (get-statement x))
+	     (symcode (car statement))
+	     (values (cdr statement))
 	     (types (cddr (hash-ref write-instruction-map symcode)))
 	     (pairs (map (lambda (type value) (cons type value)) types values)))
 	(encode-id-map encode-id-typed-add pairs dict 
 		       (lambda (args dict)
-			 (cont `(,pos ,symcode ,@args) dict)))))))
+			 (cont `(,symcode ,@args) dict)))))))
 
-(define encode-id-code (lambda (x dict cont)
-  (encode-id-map *encode-id-code (cadr x) dict
-    (lambda (x dict) (cont (list 'code x) dict)))))
-
-(define encode-id-apply (lambda (x dict cont)
-  (cond
-   ((namespace-id? x) (encode-id-add 'namespace x  dict cont))
-   ((multiname-id? x) (encode-id-add 'multiname x  dict cont))
-   ((eq? (car x) 'code) (encode-id-code x dict cont))
-   (else (cont x dict)))))
+(define encode-id-code
+  (lambda (x dict cont)
+    (encode-id-map *encode-id-code (cadr x) dict
+      (lambda (x dict) (cont (list 'code x) dict)))))
 
 ;; Encode literals into index form, and build a constant dictionary.
 ;; "hello" => (string 1)
@@ -1223,13 +1224,22 @@
 ;; CPS style encoder. Encoded expression and new dictionary is passed to cont.
 ;; cont is a function like (cont expr dictionary)
 
-(define encode-id (lambda (x dict cont)
-  (cond
-   ((string? x) (encode-id-add 'string x dict cont))
-   ((eq? x '*) (cont '(multiname 0) dict)) ;note: '* can be multiname, namespace, or ns_set. but never mind.
-   ((not (pair? x)) (cont x dict))
-   (else (encode-id-map encode-id x dict
-	   (lambda (x dict) (encode-id-apply x dict cont)))))))
+(define encode-id-apply
+  (lambda (x dict cont)
+    (cond
+     ((namespace-id? x) (encode-id-add 'namespace x  dict cont))
+     ((multiname-id? x) (encode-id-add 'multiname x  dict cont))
+     ((eq? (car x) 'code) (encode-id-code x dict cont))
+     (else (cont x dict)))))
+
+(define encode-id
+  (lambda (x dict cont)
+    (cond
+     ((string? x) (encode-id-add 'string x dict cont))
+     ((eq? x '*) (cont '(multiname 0) dict)) ;note: '* can be multiname, namespace, or ns_set. but never mind.
+     ((not (pair? x)) (cont x dict))
+     (else (encode-id-map encode-id x dict
+       (lambda (x dict) (encode-id-apply x dict cont)))))))
 
 (define from-asm (lambda (x)
   (if (not (eq? (car x) 'asm)) (error (format "This is not a ASM form: ~a" x)) '())
