@@ -875,51 +875,64 @@
 
 ;;; code writer
 
+;; Return (inst args ...) without line number.
+(define get-statement
+  (lambda (line)
+    (if (or (number? (car line))
+	    (eq? (car line) '_))
+	(cdr line)
+	line)))
+
 ;; Caluculate instruction length
 
-(define instruction-u30-length (lambda (value)
-  (cond
-   ((= (arithmetic-shift value -7) 0) 1)
-   ((= (arithmetic-shift value -14) 0) 2)
-   ((= (arithmetic-shift value -21) 0) 3)
-   ((= (arithmetic-shift value -28) 0) 4)
-   (else 5))))
+(define instruction-u30-length
+  (lambda (value)
+    (cond
+     ((= (arithmetic-shift value -7) 0) 1)
+     ((= (arithmetic-shift value -14) 0) 2)
+     ((= (arithmetic-shift value -21) 0) 3)
+     ((= (arithmetic-shift value -28) 0) 4)
+     (else 5))))
 
-(define instruction-arg-length (lambda (type value sum)
-;(dprint (list type value sum))
-  (+ sum
-     (cond
-      ((eq? type 'u8) 1)
-      ((eq? type 'offset) 3)
-      ((memq type '(u30 register)) (instruction-u30-length value))
-      ((memq type '(double integer method multiname string uinteger))
-       (instruction-u30-length (cadr value)))
-      (else (error (format "Unknown type (instruction-arg-length): ~a ~a" type value)))))))
+(define instruction-arg-length
+  (lambda (type value sum)
+    (+ sum
+       (cond
+	((eq? type 'u8) 1)
+	((eq? type 'offset) 3)
+	((memq type '(u30 register)) (instruction-u30-length value))
+	((memq type '(double integer method multiname string uinteger))
+	 (instruction-u30-length (cadr value)))
+	(else (error (format "Unknown type (instruction-arg-length): ~a ~a" type value)))))))
 
-(define instruction-length (lambda (line)
-  (let* ((inst (cadr line))
-	 (spec (hash-ref write-instruction-map inst))
-	 (arg-types (cddr spec))
-	 (arg-values (cddr line))
-	 (arg-length (foldl instruction-arg-length 0 arg-types arg-values)))
-    (add1 arg-length))))
+(define instruction-length
+  (lambda (line)
+    (let* ((statement (get-statement line))
+	   (inst (car statement))
+	   (spec (hash-ref write-instruction-map inst))
+	   (arg-types (cddr spec))
+	   (arg-values (cdr statement))
+	   (arg-length (foldl instruction-arg-length 0 arg-types arg-values)))
+      (add1 arg-length))))
 
 ;; Add into dst-labels if the line is a label (symbol),
 ;; Return next position.
-(define *write-label-extract (lambda (line pos dst-labels)
-  (if (symbol? line)
-      (begin (hash-set! dst-labels line pos)
-	     pos)
-      (+ (instruction-length line) pos))))
+(define *write-label-extract
+  (lambda (line pos dst-labels)
+    (if (symbol? line)
+	(begin (hash-set! dst-labels line pos)
+	       pos)
+	(+ (instruction-length line) pos))))
 
 ;; Return a dictionary where label -> position
-(define write-label-extract (lambda (lines)
-  (let ((dst-labels (make-hasheq)))
-    (foldl (lambda (line pos)
-	     (*write-label-extract line pos dst-labels))
-	   0
-	   lines)
-    dst-labels)))
+(define write-label-extract
+  (lambda (lines)
+    (let ((dst-labels (make-hasheq)))
+      (foldl (lambda (line pos)
+	       (*write-label-extract line pos dst-labels))
+	     0
+	     lines)
+      dst-labels)))
 
 ;; Remove label symbol and replace label to offset.
 
@@ -934,32 +947,34 @@
 	  (write-s24 diff port)) ; in case of (offset -10) form.
 	))))
 
+;; Replace a label to an offset reference
+;; - A line of symbol (destination label) is ommited. e.g. L1 -> removed
+;; - A line number is ommited if it exists. e.g. (42 jump L1) -> (jump (offset 7))
 (define *write-label-replace (lambda (lines dst-labels)
   (if (null? lines)
       '()
       (let ((line (car lines)))
 	(if (symbol? line)
 	    (*write-label-replace (cdr lines) dst-labels) ; the line is label
-	    (let* ((pos (car line))
-		   (inst (cadr line))
-		   (args (cddr line))
+	    (let* ((statement (get-statement line))
+		   (inst (car statement))
+		   (args (cdr statement))
 		   (*line (if (and (= (length args) 1)
 				   (symbol? (car args)))
 			      (let ((offset (hash-ref dst-labels (car args))))
-				`(,pos ,inst (offset ,offset)))
-			      line)))
+				`(,inst (offset ,offset)))
+			      statement)))
 	      (cons *line (*write-label-replace (cdr lines) dst-labels))))))))
 
-(define write-label-replace (lambda (lines)
-  (let ((dst-labels (write-label-extract lines)))
-    (*write-label-replace lines dst-labels))))
+(define write-label-replace
+  (lambda (lines)
+    (let ((dst-labels (write-label-extract lines)))
+      (*write-label-replace lines dst-labels))))
 
 (define write-offset (lambda (x port)
   (let ((offset (+ (file-position port) 3)))
     (write-s24 (- (cadr x) offset) port))))
 
-;;
-    
 (define write-arguments (lambda (args spec port)
   (for-each (lambda (type arg)
 	      (cond
@@ -978,22 +993,26 @@
 	       ))
 	    spec args)))
 
-(define write-instruction (lambda (statement port)
-  (let* ((inst (cadr statement))
-	 (spec (hash-ref write-instruction-map inst)))
-    (write-u8 (car spec) port)
-    (write-arguments (cddr statement) (cddr spec) port))))
+(define write-instruction
+  (lambda (statement port)
+    (let* (
+	   (inst (car statement))
+	   (spec (hash-ref write-instruction-map inst))
+	   (args (cdr statement)))
+      (write-u8 (car spec) port)
+      (write-arguments args (cddr spec) port))))
 
-(define write-instructions (lambda (code port)
-  (for-each (lambda (statement) 
-	      (write-instruction statement port)) code)))
+(define write-instructions
+  (lambda (code port)
+    (for-each (lambda (statement) 
+		(write-instruction statement port)) code)))
 
-(define encode-instructions (lambda (code)
-;(dprint code)
-  (let ((*code (write-label-replace code)))
-    (call-with-output-bytes
-     (lambda (port)
-       (write-instructions *code port))))))
+(define encode-instructions
+  (lambda (code)
+    (let ((*code (write-label-replace code)))
+      (call-with-output-bytes
+       (lambda (port)
+	 (write-instructions *code port))))))
 
 ;;; method_body_info writer
 

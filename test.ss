@@ -23,8 +23,6 @@
 #lang scheme
 (require srfi/78) ; Lightweight testing
 
-;(require "abc.ss")
-;(require "instruction.ss")
 (include "instruction.k")
 (include "abc.k")
 
@@ -139,38 +137,27 @@
     (write-arguments '((multiname 2) 1) '(multiname u30) p)))
  => (bytes 2 1))
 
-(check
- (call-with-output-bytes
-  (lambda (p)
-    (write-instruction '(7 callproperty (multiname 2) 1)
-			p))) => (bytes #x46 2 1))
+(check (to-bytes write-instruction '(callproperty (multiname 2) 1)) => (bytes #x46 2 1))
+(check (to-bytes write-instruction '(getlocal_0)) => (bytes #xd0))
 
-(roundtrip-check (lambda (x p) (write-instructions x p))
-		 read-instructions
-		 '((0 getlocal 0)
-		   (2 pushscope)
-		   (3 findpropstrict (multiname 1))
-		   (5 pushstring (string 4))
-		   (7 callproperty (multiname 2) 1)
-		   (10 returnvoid))
-		 )
+(check (decode-instructions
+	(encode-instructions
+	 '((getlocal 0)
+	   (pushscope)
+	   (findpropstrict (multiname 1))
+	   (pushstring (string 4))
+	   (callproperty (multiname 2) 1)
+	   (returnvoid)))) => 
+	   '((0 getlocal 0)
+	     (2 pushscope)
+	     (3 findpropstrict (multiname 1))
+	     (5 pushstring (string 4))
+	     (7 callproperty (multiname 2) 1)
+	     (10 returnvoid)))
 
-(check
- (call-with-output-bytes
-  (lambda (p)
-    (write-instruction '(0 getlocal_0)
-			p))) => (bytes #xd0))
-
-(roundtrip-check (lambda (x p) (write-instructions x p))
-		 read-instructions
-		 '((0 getlocal_0)
-;		   (1 debugfile (string 1))
-;		   (3 pushscope)
-;		   (4 getlocal_0)
-;		   (5 debugline 9)
-;		   (7 finddef (multiname 1))
-;		   (9 pushstring (string 2))
-		 ))
+(roundtrip-check (lambda (x p) (write-bytes (encode-instructions x) p))
+ 		 read-instructions
+ 		 '((0 getlocal_0)))
 
 ;;; decode-id
 
@@ -226,9 +213,6 @@
 		   (multiname (((namespace 2) (string 1))
 			       ((namespace 1) (string 2))))
 		   )) => (bytes #x4 #xf6 #xff #xff #xff #xf #x0 #xa #x4 #xa #x14 #x1e #x1 #x4 #x5 #x68 #x65 #x6c #x6c #x6f #x5 #x77 #x6f #x72 #x6c #x64 #xd #x66 #x6c #x61 #x73 #x68 #x2e #x64 #x69 #x73 #x70 #x6c #x61 #x79 #x3 #x5 #x1 #x16 #x3 #x3 #x1 #x1 #x2 #x1 #x2 #x3 #x7 #x2 #x1 #x7 #x1 #x2 ))
-
-
-
 
 ;;; Round trip of cpool_info
 (roundtrip-check write-cpool_info read-cpool_info
@@ -302,9 +286,9 @@
 
 ;;; Jump writer
 
-(check (instruction-length '(_ pop)) => 1)
-(check (instruction-length '(_ pushint (integer 1))) => 2)
-(check (instruction-length '(_ callproperty (multiname 1) 1)) => 3)
+(check (instruction-length '(pop)) => 1)
+(check (instruction-length '(pushint (integer 1))) => 2)
+(check (instruction-length '(callproperty (multiname 1) 1)) => 3)
 
 (check (instruction-arg-length 'integer '(integer 1) 0) => 1)
 (check (instruction-arg-length 'integer '(integer #x7f) 0) => 1)
@@ -326,9 +310,9 @@
 (let ((dst-labels 
        (write-label-extract
 	'(L1
-	  (_ jump L1)
-	  (_ jump L2)
-	  (_ jump L2)
+	  (jump L1)
+	  (jump L2)
+	  (jump L2)
 	  L2
 	  ))))
   (check (hash-ref dst-labels 'L1) => 0)
@@ -337,15 +321,15 @@
 ;; Set position and placeholder.
 (check (write-label-replace
 	'(L1
-	  (_ jump L1)
-	  (_ jump L2)
-	  (_ jump L2)
+	  (jump L1)
+	  (jump L2)
+	  (jump L2)
 	  L2
 	  ))
        => '(
-	  (_ jump (offset 0))
-	  (_ jump (offset 12))
-	  (_ jump (offset 12)
+	  (jump (offset 0))
+	  (jump (offset 12))
+	  (jump (offset 12)
 	  )))
   
 ;;; ABC form
