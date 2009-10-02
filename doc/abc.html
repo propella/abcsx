@@ -1,19 +1,25 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
+<meta name="generator" content=
+"HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 13), see www.w3.org" />
 <title>An Assembler for AVM2 using S-Expression</title>
-<meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii" />
 <style type="text/css">
 /*<![CDATA[*/
 /* body { margin: 1em 3em 1em 3em; } */
 
- div.c1 {text-align: center}
- pre {
-/*  border: solid 1px; */
-  padding: 1em;
-  margin-left: 2em;
- }
+/* .code { font-family: "Courier New", Courier, mono; } */
+.code {font-family: monospace; }
+dl { margin-left: 2em }
+dd { margin: 0.5em }
+div.c1 {text-align: center}
+pre {
+ padding: 1em;
+ margin-left: 2em;
+}
 
 /*]]>*/
 </style>
@@ -22,7 +28,7 @@
 <div class="c1">
 <h1>An Assembler for AVM2 using S-Expression</h1>
 <p>Takashi Yamamiya</p>
-<p><address>takashi@vpri.org</address></p>
+<address>takashi@vpri.org</address>
 <p>2009-10-01</p>
 </div>
 <h2>Overview</h2>
@@ -31,12 +37,12 @@ Virtual Machine 2 (AVM2) and the ActionScript Byte Code (ABC). It
 runs on both Cola/Amino language and PLT-Shcheme. The syntax
 consists of s-expressions and a program can be constructed with
 normal list operations in Scheme like language. The goal of this
-utility is to build a high level language running on AVM2 and Adobe
+utility is to build a high level language running on AVM2 by Adobe
 Flash Player. To get the idea, "Hello World!" programs for both and
 abcasm (a standard assembler utility consisted in the AVM2 source
 tree) are shown.</p>
 <pre>
-;;;; A "Hello World!" program in ABCSX ASM form
+;;;; A "Hello World!" program in ABCSX ASM-form
 (asm
  (method
   (((signature
@@ -63,21 +69,19 @@ function hello():*
     returnvoid
 }
 </pre>
-
 <p>Although a program written in abcasm syntax is more concise than
 ABCSX, semantics of the program is ambiguous. For example, in spite of
 each name (symbol) in ABC belongs to namespace(s), but the syntax of
 abcasm doesn't describe it clearly. In this case, "print" is
 interpreted to a Multiple Namespace Name with a namespace set
-including PackageNamespace with no name.  This is good for writing a
-program by human, but not necessary for a machine generated
-code. ABCSX rather takes a direction toward verbose but unambiguous
-style.</p>
-
-<p>ABCSX offers two forms of syntax. ASM form is higher level
-syntax introduced above. ABC form is identical to an abstract
-syntax tree of ABC binary file. This is useful for debugging.</p>
-
+including PackageNamespace with no name. This implicit behavior might
+be useful for writing a program by hand, but not necessary for a
+machine generated code.  ABCSX rather takes a direction toward verbose
+but unambiguous style.</p>
+<p>ABCSX offers two forms of syntax. ASM-form is higher level syntax
+introduced above. ABC-form is identical to an abstract syntax tree of
+ABC binary file. This is useful when exact behavior is need to know
+while debug.</p>
 <pre>
 (abc
  (minor_version 16)
@@ -109,16 +113,151 @@ syntax tree of ABC binary file. This is useful for debugging.</p>
     (exception ())
     (trait ())))))
 </pre>
-
-<p>Although ABC form is generated from ASM form mechanically, the
-reason of providing high level ASM form is to ease writing a compiler.
-Using ASM form, a compiler writer doesn't have to care about to
-extract a constant pool, or code hint information (AVM2 requires a
-frame information like stack size and register size used in a
-code).</p>
+<p>Although ABC-form is generated from ASM-form mechanically, the
+reason of providing high level ASM-form is to ease writing a
+compiler. Using ASM-form, a compiler writer doesn't have to care
+about to build a constant pool, or code hint information (AVM2
+requires a frame information like stack size and register size used
+in a code).</p>
 
 <h2>Background</h2>
 
+<p>One of goals of the STEPS project and COLA programming language is
+to provide full controll of computer environment from application
+level to machine language lavel, so that users could experiment and
+design their own programming language to best fit to the task. It also
+will be used as a basis of next generation of EToys programming
+environment for kids.</p>
 
+<p>We chose Adobe Flash Player as one of the platforms of the system
+because of its popularity and usability. Using Flash's virtual machin
+AVM2 on a web browser, we could deliver our programming environment
+without concerning about installation process or security.</p>
+
+<p>AVM2 has some disadvantages compared to Java VM. AVM2 lacks multi
+task support, and its dynamic dispatching function is relatively
+slow. But the startup speed and memory footage are good, and these
+aspects are essential to casual users. Especially AVM2 will be good
+platform to implement EToys.</p>
+
+<p>ABCSX is designed to be a backend module for COLA, command line
+assembler / disassember, and a Scheme library. While it is a part of
+COLA/ABC compiler, it is also useful as a tool to examine and debug
+ABC binary file.</p>
+
+<h2>Usage</h2>
+
+<h3>Command line tool</h3>
+
+<p>A version of ABCSX is publicly available on a github repository
+<a href="http://github.com/propella/abcsx">http://github.com/propella/abcsx</a>. It
+includes command line tools run on PLT-Scheme. There are also example
+programs at examples/ directory. The assembler and disassember use
+same file format and the assembler asm.ss can read an output file
+generated by disasembler dump.ss.</p>
+
+<dl>
+<dt class="code">asm.ss <i>filename.sx</i></dt>
+<dd>Generate ABC binary file from ASM-form or ABC-form. The output
+file name is filename.sx.abc.</dd>
+
+<dt class="code">dump.ss [-abc] <i>filename.abc</i></dt>
+<dd>Desassemble an abc file. The output is printed to stdout. If -abc
+option is specified, ABC-form is chosen.</dd>
+
+<dt class="code">runasm.sh <i>filename.sx</i></dt>
+<dd>Assemble ASM-form or ABC-form and execute it by avmshell. It requires
+avmshell installed. Avmshell is included in Tamarin VM's source tree.</dd>
+
+<dt class="code">swf_abc.erl <i>width height classname abcfile.abc</i></dt>
+<dd>A helper program to generate a flash file from an abc file. It
+requires Erlang.</dd>
+</dl>
+
+<h3>Function</h3>
+
+<dl>
+
+<dt><span class="code">(write-asm <i>list</i> <i>port</i>)</span> procedure</dt>
+<dd>Assemble ASM- or ABC-form to a binary stream.</dd>
+
+<dt><span class="code">(read-asm <i>port</i>)</span> procedure</dt>
+<dd>Disassemble a binary stream to ASM-form.</dd>
+
+<dt><span class="code">(from-asm <i>list</i>)</span> procedure</dt>
+<dd>Convert ASM-form to ABC-form. This is a part of process of
+assemble.  Each literal value is replaced to a reference, and a
+constant pool is created</dd>
+
+<dt><span class="code">(to-asm <i>list</i>)</span> procedure</dt>
+<dd>Convert ABC-form to ASM-form. This is a part of process of
+disassemble. Each constant reference in the ABC-form is replaced to a
+literal value based on the constant pool.</dd>
+</dl>
+
+<h2>Data Type</h2>
+
+AVM2's data is expressed as scheme expression in ABCSX. In ASM-form
+Data conversion has a subtle context dependency in code section.
+
+<ul>
+<li>integer - An integer value in Scheme is converted to AVM2
+integer value depend on the context.
+<ul>
+<li>int (s32) - In code section, an integer is converted to a signed
+32 bit integer if the opcode requires integer e.g. pushint.
+<li>uint (u32) - In code section, an integer is converted to a
+unsigned 32 bit integer if the opcode requires integer e.g. pushuint.
+<li>u30 - An integer is converted to a unsigned 30 bit integer in AVM2
+anywhere else.
+</ul>
+<li>double (d64) - A floating point number value is converted to a
+64-bit double precision IEEE 754 value.
+<li>string - A String is converted string value in AVM2.
+<li>namespace - Some list expressions are converted to namespace in AVM2. The format is (<i>kind</i> <i>name</i>). For example, <span class="code">(package "org.vpri")</span> is converted to a package namespace named org.vpri.
+<ul>
+<li>Namespace - <tt>(ns <i>name</i>)</tt> is converted to Namespace
+<li>PackageNamespace - <tt>(package <i>name</i>)</tt> is converted to PackageNamespace
+<li>PackageInternalNs - <tt>(internal <i>name</i>)</tt> is converted to PackageInternalNs
+<li>ProtectedNamespace - <tt>(protected <i>name</i>)</tt> is converted to ProtectedNamespace
+<li>ExplicitNamespace - <tt>(explicit <i>name</i>)</tt> is converted to ExplicitNamespace
+<li>StaticProtectedNs - <tt>(static <i>name</i>)</tt> is converted to StaticProtectedNs
+<li>PrivateNs - <tt>(private <i>name</i>)</tt> is converted to PrivateNs
+</ul>
+<li>namespace set - There is no way to specify a namespace as a
+literal. To use namesapece set, it is need to define members of the
+namespace set in the constant pool section, and make a reference to
+the index e.g. <span class="code">(ns_set 1)</span>.
+<li>multiname - Some list expressions are converted to multiname (symbol) in AVM2.
+<ul>
+<li>QName - <tt>(<i>namespace</i> <i>string</i>)</tt> is converted as QName e.g. <span class="code">((package "flash.display") "Sprite"))</span>
+<li>RTQName - is not supported.
+<li>RTQNameL - is not supported.
+<li>Multiname - <tt>((ns_set <i>index</i>) <i>string</i>)</tt> is converted as a Multiname e.g. <span class="code">((ns_set 1) "addChild")</span>
+<li>MultinameL - is not supported.
+</ul>
+</ul>
+
+<h2>Syntax</h2>
+
+<h3>ns_set section</h3>
+<h3>method section</h3>
+<h4>signature subsection</h4>
+<h4>code subsection</h4>
+<h3>instance section</h3>
+<h3>class section</h3>
+<h3>script section</h3>
+
+<h2>References</h2>
+<ul>
+<li>ABCSX github
+repository. <a href="http://github.com/propella/abcsx">http://github.com/propella/abcsx</a></li>
+<li>ActionScript Virtual Machine 2 (AVM2) Overview. <a href=
+"http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf">
+http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf</a></li>
+<li>Steps Toward the Reinvention of Programming (First Year
+Progress Report). <a href=
+"http://www.vpri.org/pdf/tr2007008_steps.pdf">http://www.vpri.org/pdf/tr2007008_steps.pdf</a></li>
+</ul>
 </body>
 </html>

@@ -45,8 +45,7 @@
  (instance
   (((name ((package "") "textField"))
     (super_name ((package "flash.display") "Sprite"))
-    (flags 9)
-    (protectedNs (protected "textField"))
+    (flags 0)
     (interface ())
     (iinit (method 1))
     (trait ()))))
