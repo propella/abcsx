@@ -248,6 +248,17 @@
 		   (classi (class 0))
 		   (metadata ())))
 
+(roundtrip-check write-traits_info read-traits_info
+		 '((kind class)
+		   (name (multiname 7))
+		   (slot_id 1)
+		   (classi (class 0))
+		   (metadata (
+			      ((name (string 1)) (items (((key (string 2)) (value (string 3)))
+							 ((key (string 4)) (value (string 5))))))
+			      ((name (string 6)) (items (((key (string 7)) (value (string 8))))))
+			      ))))
+
 (roundtrip-check write-instance_info read-instance_info
 		 '((name (multiname 3))
 		   (super_name (multiname 5))

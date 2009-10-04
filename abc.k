@@ -315,7 +315,7 @@
 	 (typename (car data))
 	 (others (cdr data))
 	 (metadata (if is-ATTR_Metadata
-		       (read-list0 read-u30 port)
+		       (read-list0 read-metadata_info port)
 		       '())))
 ;    (if (zero? name) (error "traits_info.name cannot be zero") '())
     `((kind ,typename)
@@ -809,13 +809,19 @@
 (define write-trait_class ;; todo: slot_id and metadata can be converged with other slots.
   (lambda (x port)
     (let ((slot_id (ref 'slot_id x))
-	  (classi (ref 'classi x)))
+	  (classi (ref 'classi x))
+	  (has-metadata (> (length (ref 'metadata x)) 0))
+	  )
       (write-id 'multiname (ref 'name x) port)
-      (write-u8 Trait_Class port)
+      (write-u8 (if has-metadata
+		    (bitwise-ior Trait_Class #b01000000) ; ATTR_Metadata
+		    Trait_Class)
+		port)
       (write-u30 slot_id port)
       (write-id 'class classi port)
-      ; metadata omitted (ATTR_Metadata)
-      )))
+      (if has-metadata
+	  (write-list0 write-metadata_info (ref 'metadata x) port)
+	  '()))))
 
 (define write-traits_info
   (lambda (x port)
@@ -1093,7 +1099,6 @@
   (lambda (key line spec)
     (let ((expr (assoc key spec)))
 ;(pretty-print expr)
-
       (if expr
 	  (*from-asm-make-hint-eval (cdr (get-statement line)) (cadr expr))
 	  0))))
@@ -1248,6 +1253,7 @@
 	     (method (ref 'method body))
 	     (script (ref 'script body))
 	     (method-signature (from-asm-method-signature method))
+	     (metadata (ref 'metadata body '()))
 	     (instance (ref 'instance body '()))
 	     (class (ref 'class body '()))
 	     (method_body (from-asm-method_body method))
@@ -1256,7 +1262,7 @@
 	  (minor_version 16) (major_version 46)
 	  (constant_pool ,constant)
 	  (method ,method-signature)
-	  (metadata ())
+	  (metadata ,metadata)
 	  (instance ,instance)
 	  (class ,class)
 	  (script ,script)
