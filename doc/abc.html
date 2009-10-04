@@ -19,6 +19,7 @@ div.c1 {text-align: center}
 pre {
  padding: 1em;
  margin-left: 2em;
+ background: #f0f0f0;
 }
 
 /*]]>*/
@@ -29,7 +30,7 @@ pre {
 <h1>An Assembler for AVM2 using S-Expression</h1>
 <p>Takashi Yamamiya</p>
 <address>takashi@vpri.org</address>
-<p>2009-10-01</p>
+<p>2009-10-04</p>
 </div>
 <h2>Overview</h2>
 <p>ABCSX is an assembler and disassember for the ActionScript
@@ -83,6 +84,7 @@ introduced above. ABC-form is identical to an abstract syntax tree of
 ABC binary file. This is useful when exact behavior is need to know
 while debug.</p>
 <pre>
+;;;; A "Hello World!" program in ABCSX ABC-form
 (abc
  (minor_version 16)
  (major_version 46)
@@ -198,55 +200,290 @@ literal value based on the constant pool.</dd>
 <h2>Data Type</h2>
 
 AVM2's data is expressed as scheme expression in ABCSX. In ASM-form
-Data conversion has a subtle context dependency in code section.
+Data conversion has subtle context dependency in code-subsection.
 
 <ul>
 <li>integer - An integer value in Scheme is converted to AVM2
 integer value depend on the context.
 <ul>
-<li>int (s32) - In code section, an integer is converted to a signed
-32 bit integer if the opcode requires integer e.g. pushint.
-<li>uint (u32) - In code section, an integer is converted to a
-unsigned 32 bit integer if the opcode requires integer e.g. pushuint.
+<li>int (s32) - In code-subsection, an integer is converted to a signed
+32 bit integer if the opcode requires integer e.g. <tt>pushint</tt>.
+<li>uint (u32) - In code-subsection, an integer is converted to a
+unsigned 32 bit integer if the opcode requires integer
+e.g. <tt>pushuint</tt>.
 <li>u30 - An integer is converted to a unsigned 30 bit integer in AVM2
 anywhere else.
 </ul>
 <li>double (d64) - A floating point number value is converted to a
 64-bit double precision IEEE 754 value.
 <li>string - A String is converted string value in AVM2.
-<li>namespace - Some list expressions are converted to namespace in AVM2. The format is (<i>kind</i> <i>name</i>). For example, <span class="code">(package "org.vpri")</span> is converted to a package namespace named org.vpri.
+<li>namespace - Some list expressions are converted to namespace in AVM2. The format is (<i>kind</i> <i>string</i>). For example, <span class="code">(package "org.vpri")</span> is converted to a package namespace named org.vpri.
 <ul>
-<li>Namespace - <tt>(ns <i>name</i>)</tt> is converted to Namespace
-<li>PackageNamespace - <tt>(package <i>name</i>)</tt> is converted to PackageNamespace
-<li>PackageInternalNs - <tt>(internal <i>name</i>)</tt> is converted to PackageInternalNs
-<li>ProtectedNamespace - <tt>(protected <i>name</i>)</tt> is converted to ProtectedNamespace
-<li>ExplicitNamespace - <tt>(explicit <i>name</i>)</tt> is converted to ExplicitNamespace
-<li>StaticProtectedNs - <tt>(static <i>name</i>)</tt> is converted to StaticProtectedNs
-<li>PrivateNs - <tt>(private <i>name</i>)</tt> is converted to PrivateNs
+<li>Namespace - <tt>(ns <i>string</i>)</tt> is converted to Namespace
+<li>PackageNamespace - <tt>(package <i>string</i>)</tt> is converted to PackageNamespace
+<li>PackageInternalNs - <tt>(internal <i>string</i>)</tt> is converted to PackageInternalNs
+<li>ProtectedNamespace - <tt>(protected <i>string</i>)</tt> is converted to ProtectedNamespace
+<li>ExplicitNamespace - <tt>(explicit <i>string</i>)</tt> is converted to ExplicitNamespace
+<li>StaticProtectedNs - <tt>(static <i>string</i>)</tt> is converted to StaticProtectedNs
+<li>PrivateNs - <tt>(private <i>string</i>)</tt> is converted to PrivateNs
 </ul>
-<li>namespace set - There is no way to specify a namespace as a
-literal. To use namesapece set, it is need to define members of the
-namespace set in the constant pool section, and make a reference to
-the index e.g. <span class="code">(ns_set 1)</span>.
+<li>namespace set - Namespace sets can not be described as literal.
+Instead, they are declared in a constant pool of ns_set-section at
+first, and be made reference by index e.g. <span class="code">(ns_set
+1)</span>.
 <li>multiname - Some list expressions are converted to multiname (symbol) in AVM2.
 <ul>
 <li>QName - <tt>(<i>namespace</i> <i>string</i>)</tt> is converted as QName e.g. <span class="code">((package "flash.display") "Sprite"))</span>
 <li>RTQName - is not supported.
 <li>RTQNameL - is not supported.
-<li>Multiname - <tt>((ns_set <i>index</i>) <i>string</i>)</tt> is converted as a Multiname e.g. <span class="code">((ns_set 1) "addChild")</span>
+<li>Multiname - <tt>((ns_set <i>integer</i>) <i>string</i>)</tt> is converted as a Multiname e.g. <span class="code">((ns_set 1) "addChild")</span>
 <li>MultinameL - is not supported.
 </ul>
 </ul>
 
 <h2>Syntax</h2>
 
-<h3>ns_set section</h3>
-<h3>method section</h3>
-<h4>signature subsection</h4>
-<h4>code subsection</h4>
-<h3>instance section</h3>
-<h3>class section</h3>
-<h3>script section</h3>
+The syntax of ASM-form is explained. ABCSX uses same symbol names as
+"ActionScript Virtual Machine 2 (AVM2) Overview" unless it is too
+strange. Especially, underline delimited names and capital names are
+derived from it.
+
+<h3>ASM-form</h3>
+<p><tt>(asm
+  <i>[ns_set-section]</i>
+  <i>method-section</i>
+  <i>[instance-section]</i>
+  <i>[class-section]</i>
+  <i>script-section)</i>
+</tt></p>
+
+<p>ASM-form begins with a symbol "asm", and contents are followed. ns_set-section, instance-section, and class-section are optional.
+
+<h3>ns_set-section</h3>
+
+<p><tt>(ns_set (ns_set <i>namespace ...</i>) ...)</tt></p>
+<p>
+Ns_set-section will be a part of constant pool, and it is only
+necessary if namespace set is used in other part of the ASM-form. You
+can not specify a namespace set directly as a literal, but you need to
+define it in  ns_set-section and point it with the index number.
+
+<p>Ns_set-section begins with a symbol
+<tt>ns_set</tt> and a list of ns_set_info is followed.  A ns_set_info
+begins with a symbol <tt>ns_set</tt> and it includes a list of
+namespaces.  A namespace set is referred by one-based index from other
+part. For example, the first namespace set is referred as <tt>(ns_set
+1)</tt>.
+
+<h3>method-section</h3>
+
+<p><tt>(method (<i>signature-subsection code-subsection</i>) ...)</tt></p>
+
+<p>
+Method-section includes a list of pairs of signature and code. A
+method is referred by zero-based index. For example, the first method
+is referred as <tt>(method 0)</tt>.
+
+<h4>signature-subsection</h4>
+
+<p><tt>(signature (return_type <i>multiname</i>)
+    (param_type (<i>multiname</i> ...))
+    (name <i>string</i>)
+    (flags <i>integer</i>)
+    (options (<i>option</i>...))
+    (param_names (<i>multiname</i> ...)))
+   </tt>
+
+<p>Signature-subsection describes method's signature. If * is
+  specified at the return_type. It is treated as Any Type. A name is
+  not used as a method name in a program. In a typical case, methods
+  are explicitly bound to named slots in initialization code at
+  script-section or object constructor.
+
+<h4>code-subsection</h4>
+
+<p><tt>(code (<i>instructions</i>...)) </tt>
+<p>Code subsection describes a sequence of instruction code of the
+method. A label is specified as a symbol, and normal instruction is
+specified as a list as:
+
+<p><tt>([<i>offset-number</i>] <i>inst-name args</i> ...)</tt></p>
+
+offset-number is optional and used just as a place holder. It can be a
+integer or symbol <tt>_</tt>. ABCSX's disassember put a byte offset
+number at this place, but the assembler ignores it.
+
+<h3>metadata-section</h3>
+
+<p><tt>(metadata (<i>metadata_info</i> ...))</tt></p>
+
+Metadata-section describes a list of metadata entries.
+
+<h3>instance-section</h3>
+
+<p><tt>(instance (((name <i>multiname</i>)
+                   (super_name <i>multiname</i>)
+                   (flags <i>integer</i>)
+                   (interface (<i>multiname</i> ...))
+                   (iinit <i>method</i>)
+                   (trait (<i>trait_info</i> ...)) ...)))
+</tt></p>
+
+<p>
+Instance-section describes a list of class definitions. Class members
+are defined by a list of trait_info.
+
+<h3>class-section</h3>
+
+<p><tt>(class (((cinit <i>method</i>) (trait (<i>trait_info</i>...))) ...))</tt></p>
+
+<p>Class-section describes a list of static members of class
+definition. The number of this list is same as instance-section, and
+each entry of class-section corresponds to each entry in
+instance-section. A definition consists of a class initializer and
+trait_info definitions.
+
+<h3>script-section</h3>
+
+<p><tt>(script (((init <i>method</i>) (trait (<i>trait_info</i>...))) ...))</tt></p>
+
+<p>Script-section defines a list of static functions. It is also used
+as a program's startup code. Once the virtual machine reads a program,
+the last entry of script-section is invoked. Each entry consists of a
+method reference and a list of trait_info. Trait_info is used as a
+function's environment.
+
+
+<h3>trait_info</h3>
+
+<p>Trait_info defines a fixed property of an object, class, or
+method. ABCSX only supports Trait_Slot and Trait_Class.
+
+<h4>Trait_Slot</h4>
+
+<p><tt>((kind slot) (name <i>multiname</i>) (slot_id <i>integer</i>) (type_name <i>multiname</i>) (vindex <i>integer</i>) (vkind <i>integer</i>) (metadata (<i>metadata_info</i>...)))</tt></p>
+
+Trait_Slot defines a named slot in the context.
+
+<h4>Trait_Class</h4>
+
+<p><tt>((kind class) (name <i>multiname</i>) (slot_id <i>integer</i>)
+     (classi <i>class</i>) (metadata (<i>metadata_info</i>...)))</tt></p>
+
+Trait_Class defines a named slot with a class in the context.
+
+<h3>metadata_info</h3>
+
+<p><tt>((name <i>string</i>) (items (((key <i>string</i>) (value <i>string</i>)) ...)))</tt></p>
+
+Metadata_info defines an entry including arbitrary key/value pairs.
+
+<h2>Example</h2>
+
+As a complete example, GUI version of "Hello World!" program is shown
+with a commentary. This file is available
+at <tt>examples/textField.sx</tt> on the source tree.
+
+<pre>
+(asm
+ (ns_set
+  ((ns_set (package "") (package "flash.text"))))
+</pre>
+A ASM-form begins with a symbol <tt>asm</tt>, and a ns_set-section
+follows if necessary. This example declare one namespace set including
+package namespaces <tt>""</tt> and <tt>"flash.text"</tt>
+as <tt>(ns_set 1)</tt>. Ns_set's index number starts with 1 because
+this is a member of constant pool. Other kind of index number (method,
+class) starts with 0.
+
+<pre>
+ (method
+  (((signature ((return_type *) (param_type ()) (name "")
+		(flags 0) (options ()) (param_names ())))
+    (code
+     ((returnvoid))))
+</pre>
+The first method is reffered as <tt>(method 0)</tt>. It is used as a
+class initializer in the class-section, but nothing to do in this
+case.
+<pre>
+   ((signature ((return_type *) (param_type ()) (name "")
+		(flags 0) (options ()) (param_names ())))
+    (code
+     ((getlocal_0)
+      (pushscope)
+      (getlocal_0)
+      (constructsuper 0)
+      (findpropstrict ((ns_set 1) "TextField"))
+      (constructprop ((package "flash.text") "TextField") 0)
+      (coerce ((package "flash.text") "TextField"))
+      (setlocal_1)
+      (getlocal_1)
+      (pushstring "Hello, World!")
+      (setproperty ((package "") "text"))
+      (findpropstrict ((package "") "addChild"))
+      (getlocal_1)
+      (callproperty ((package "") "addChild") 1)
+      (pop)
+      (returnvoid))))
+</pre>
+The second method is used in the instance-section as constructor. It
+makes an instance of <tt>flash.text.TextField</tt> and set "Hello,
+World!" to the property named <tt>text</tt>. Finally, this instance is
+added to this object.
+<pre>
+   ((signature ((return_type *) (param_type ()) (name "")
+		(flags 0) (options ()) (param_names ())))
+    (code
+     ((getlocal_0)
+      (pushscope)
+      (getscopeobject 0)
+      (findpropstrict ((package "") "Object"))
+      (getproperty ((package "") "Object"))
+      (pushscope)
+      (findpropstrict ((package "flash.display") "Sprite"))
+      (getproperty ((package "flash.display") "Sprite"))
+      (pushscope)
+      (findpropstrict ((package "flash.display") "Sprite"))
+      (getproperty ((package "flash.display") "Sprite"))
+      (newclass 0)
+      (popscope)
+      (popscope)
+      (initproperty ((package "") "textField"))
+      (returnvoid))))))
+</pre>
+The third method is used as the startup script. It creates an
+environment and initialize a new class defined in instance-section and
+class-section by <tt>newclass</tt> instruction.
+<pre>
+ (instance
+  (((name ((package "") "textField"))
+    (super_name ((package "flash.display") "Sprite"))
+    (flags 0)
+    (interface ())
+    (iinit (method 1))
+    (trait ()))))
+ (class (((cinit (method 0)) (trait ()))))
+</pre>
+Instance-section and class section define classes. In this case, A
+class named <tt>textField</tt> is defined as a subclass
+of <tt>flash.display.Sprite</tt>. When a SWF file is created from ABC
+file, a SymbolClass tag in the SWF creates association between a class
+name defined here and the main timeline of the SWF. In ABCSX tool set,
+script <tt>swf_abc.erl</tt>'s third argument does this task.
+
+<pre>
+ (script
+  (((init (method 2))
+    (trait
+     (((kind class)
+       (name ((package "") "textField"))
+       (slot_id 1)
+       (classi (class 0))
+       (metadata ()))))))))
+</pre>
+
+Script-section defines the startup script and predefined named slot.
 
 <h2>References</h2>
 <ul>

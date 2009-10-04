@@ -1,18 +1,26 @@
-; -*- lisp -*-
+;; -*- lisp -*-
+;; A GUI version Hello World! program.
+;; 
+;; How to make a swf file of this program.
+;; ../asm.ss textField.sx
+;; ../swf_abc.erl 100 100 textField textField.sx.abc 
+
 (asm
+ (ns_set
+  ((ns_set (package "") (package "flash.text"))))
  (method
-  (((signature ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
+  (((signature ((return_type *) (param_type ()) (name "")
+		(flags 0) (options ()) (param_names ())))
     (code
-     ((getlocal_0)
-      (pushscope)
-      (returnvoid))))
-   ((signature ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
+     ((returnvoid))))
+   ((signature ((return_type *) (param_type ()) (name "")
+		(flags 0) (options ()) (param_names ())))
     (code
      ((getlocal_0)
       (pushscope)
       (getlocal_0)
       (constructsuper 0)
-      (findpropstrict ((package "flash.text") "TextField"))
+      (findpropstrict ((ns_set 1) "TextField"))
       (constructprop ((package "flash.text") "TextField") 0)
       (coerce ((package "flash.text") "TextField"))
       (setlocal_1)
@@ -24,7 +32,8 @@
       (callproperty ((package "") "addChild") 1)
       (pop)
       (returnvoid))))
-   ((signature ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
+   ((signature ((return_type *) (param_type ()) (name "")
+		(flags 0) (options ()) (param_names ())))
     (code
      ((getlocal_0)
       (pushscope)
