@@ -1,48 +1,58 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<meta name="generator" content=
-"HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 13), see www.w3.org" />
-<title>An Assembler for AVM2 using S-Expression</title>
-<meta http-equiv="Content-Type" content=
-"text/html; charset=us-ascii" />
-<style type="text/css">
+  <meta name="generator" content=
+  "HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 13), see www.w3.org" />
+
+  <title>An Assembler for AVM2 using S-Expression</title>
+  <meta http-equiv="Content-Type" content=
+  "text/html; charset=us-ascii" />
+  <style type="text/css">
 /*<![CDATA[*/
-/* body { margin: 1em 3em 1em 3em; } */
+  /* body { margin: 1em 3em 1em 3em; } */
 
-/* .code { font-family: "Courier New", Courier, mono; } */
-.code {font-family: monospace; }
-dl { margin-left: 2em }
-dd { margin: 0.5em }
-div.c1 {text-align: center}
-pre {
- padding: 1em;
- margin-left: 2em;
- background: #f0f0f0;
-}
+  /* .code { font-family: "Courier New", Courier, mono; } */
+  .code {font-family: monospace; }
+  dl { margin-left: 2em }
+  dd { margin: 0.5em }
+  div.c1 {text-align: center}
+  pre {
+  padding: 1em;
+  margin-left: 2em;
+  background: #f0f0f0;
+  }
 
-/*]]>*/
-</style>
+  /*]]>*/
+  </style>
 </head>
+
 <body>
-<div class="c1">
-<h1>An Assembler for AVM2 using S-Expression</h1>
-<p>Takashi Yamamiya</p>
-<address>takashi@vpri.org</address>
-<p>2009-10-04</p>
-</div>
-<h2>Overview</h2>
-<p>ABCSX is an assembler and disassember for the ActionScript
-Virtual Machine 2 (AVM2) and the ActionScript Byte Code (ABC). It
-runs on both Cola/Amino language and PLT-Shcheme. The syntax
-consists of s-expressions and a program can be constructed with
-normal list operations in Scheme like language. The goal of this
-utility is to build a high level language running on AVM2 by Adobe
-Flash Player. To get the idea, "Hello World!" programs for both and
-abcasm (a standard assembler utility consisted in the AVM2 source
-tree) are shown.</p>
-<pre>
+  <div class="c1">
+    <h1>An Assembler for AVM2 using S-Expression</h1>
+
+    <p>Takashi Yamamiya</p>
+
+    <address>
+      takashi@vpri.org
+    </address>
+
+    <p>2009-10-04</p>
+  </div>
+
+  <h2>Overview</h2>
+
+  <p>ABCSX is an assembler and disassember for the ActionScript
+  Virtual Machine 2 (AVM2) and the ActionScript Byte Code (ABC). It
+  runs on both Cola/Amino language and PLT-Shcheme. The syntax
+  consists of s-expressions and a program can be constructed with
+  normal list operations in Scheme like language. The goal of this
+  utility is to build a high level language running on AVM2 by
+  Adobe Flash Player. To get the idea, "Hello World!" programs for
+  both and abcasm (a standard assembler utility consisted in the
+  AVM2 source tree) are shown.</p>
+  <pre>
 ;;;; A "Hello World!" program in ABCSX ASM-form
 (asm
  (method
@@ -58,7 +68,7 @@ tree) are shown.</p>
       (returnvoid))))))
  (script (((init (method 0)) (trait ())))))
 </pre>
-<pre>
+  <pre>
 // A "Hello world World!" program in abcasm
 function hello():*
 {
@@ -70,20 +80,22 @@ function hello():*
     returnvoid
 }
 </pre>
-<p>Although a program written in abcasm syntax is more concise than
-ABCSX, semantics of the program is ambiguous. For example, in spite of
-each name (symbol) in ABC belongs to namespace(s), but the syntax of
-abcasm doesn't describe it clearly. In this case, "print" is
-interpreted to a Multiple Namespace Name with a namespace set
-including PackageNamespace with no name. This implicit behavior might
-be useful for writing a program by hand, but not necessary for a
-machine generated code.  ABCSX rather takes a direction toward verbose
-but unambiguous style.</p>
-<p>ABCSX offers two forms of syntax. ASM-form is higher level syntax
-introduced above. ABC-form is identical to an abstract syntax tree of
-ABC binary file. This is useful when exact behavior is need to know
-while debug.</p>
-<pre>
+
+  <p>Although a program written in abcasm syntax is more concise
+  than ABCSX, semantics of the program is ambiguous. For example,
+  in spite of each name (symbol) in ABC belongs to namespace(s),
+  but the syntax of abcasm doesn't describe it clearly. In this
+  case, "print" is interpreted to a Multiple Namespace Name with a
+  namespace set including PackageNamespace with no name. This
+  implicit behavior might be useful for writing a program by hand,
+  but not necessary for a machine generated code. ABCSX rather
+  takes a direction toward verbose but unambiguous style.</p>
+
+  <p>ABCSX offers two forms of syntax. ASM-form is higher level
+  syntax introduced above. ABC-form is identical to an abstract
+  syntax tree of ABC binary file. This is useful when exact
+  behavior is need to know while debug.</p>
+  <pre>
 ;;;; A "Hello World!" program in ABCSX ABC-form
 (abc
  (minor_version 16)
@@ -115,300 +127,353 @@ while debug.</p>
     (exception ())
     (trait ())))))
 </pre>
-<p>Although ABC-form is generated from ASM-form mechanically, the
-reason of providing high level ASM-form is to ease writing a
-compiler. Using ASM-form, a compiler writer doesn't have to care
-about to build a constant pool, or code hint information (AVM2
-requires a frame information like stack size and register size used
-in a code).</p>
-
-<h2>Background</h2>
-
-<p>One of goals of the STEPS project and COLA programming language is
-to provide full controll of computer environment from application
-level to machine language lavel, so that users could experiment and
-design their own programming language to best fit to the task. It also
-will be used as a basis of next generation of EToys programming
-environment for kids.</p>
-
-<p>We chose Adobe Flash Player as one of the platforms of the system
-because of its popularity and usability. Using Flash's virtual machin
-AVM2 on a web browser, we could deliver our programming environment
-without concerning about installation process or security.</p>
-
-<p>AVM2 has some disadvantages compared to Java VM. AVM2 lacks multi
-task support, and its dynamic dispatching function is relatively
-slow. But the startup speed and memory footage are good, and these
-aspects are essential to casual users. Especially AVM2 will be good
-platform to implement EToys.</p>
-
-<p>ABCSX is designed to be a backend module for COLA, command line
-assembler / disassember, and a Scheme library. While it is a part of
-COLA/ABC compiler, it is also useful as a tool to examine and debug
-ABC binary file.</p>
-
-<h2>Usage</h2>
-
-<h3>Command line tool</h3>
-
-<p>A version of ABCSX is publicly available on a github repository
-<a href="http://github.com/propella/abcsx">http://github.com/propella/abcsx</a>. It
-includes command line tools run on PLT-Scheme. There are also example
-programs at examples/ directory. The assembler and disassember use
-same file format and the assembler asm.ss can read an output file
-generated by disasembler dump.ss.</p>
-
-<dl>
-<dt class="code">asm.ss <i>filename.sx</i></dt>
-<dd>Generate ABC binary file from ASM-form or ABC-form. The output
-file name is filename.sx.abc.</dd>
-
-<dt class="code">dump.ss [-abc] <i>filename.abc</i></dt>
-<dd>Desassemble an abc file. The output is printed to stdout. If -abc
-option is specified, ABC-form is chosen.</dd>
-
-<dt class="code">runasm.sh <i>filename.sx</i></dt>
-<dd>Assemble ASM-form or ABC-form and execute it by avmshell. It requires
-avmshell installed. Avmshell is included in Tamarin VM's source tree.</dd>
-
-<dt class="code">swf_abc.erl <i>width height classname abcfile.abc</i></dt>
-<dd>A helper program to generate a flash file from an abc file. It
-requires Erlang.</dd>
-</dl>
-
-<h3>Function</h3>
-
-<dl>
-
-<dt><span class="code">(write-asm <i>list</i> <i>port</i>)</span> procedure</dt>
-<dd>Assemble ASM- or ABC-form to a binary stream.</dd>
-
-<dt><span class="code">(read-asm <i>port</i>)</span> procedure</dt>
-<dd>Disassemble a binary stream to ASM-form.</dd>
-
-<dt><span class="code">(from-asm <i>list</i>)</span> procedure</dt>
-<dd>Convert ASM-form to ABC-form. This is a part of process of
-assemble.  Each literal value is replaced to a reference, and a
-constant pool is created</dd>
-
-<dt><span class="code">(to-asm <i>list</i>)</span> procedure</dt>
-<dd>Convert ABC-form to ASM-form. This is a part of process of
-disassemble. Each constant reference in the ABC-form is replaced to a
-literal value based on the constant pool.</dd>
-</dl>
-
-<h2>Data Type</h2>
-
-AVM2's data is expressed as scheme expression in ABCSX. In ASM-form
-Data conversion has subtle context dependency in code-subsection.
-
-<ul>
-<li>integer - An integer value in Scheme is converted to AVM2
-integer value depend on the context.
-<ul>
-<li>int (s32) - In code-subsection, an integer is converted to a signed
-32 bit integer if the opcode requires integer e.g. <tt>pushint</tt>.
-<li>uint (u32) - In code-subsection, an integer is converted to a
-unsigned 32 bit integer if the opcode requires integer
-e.g. <tt>pushuint</tt>.
-<li>u30 - An integer is converted to a unsigned 30 bit integer in AVM2
-anywhere else.
-</ul>
-<li>double (d64) - A floating point number value is converted to a
-64-bit double precision IEEE 754 value.
-<li>string - A String is converted string value in AVM2.
-<li>namespace - Some list expressions are converted to namespace in AVM2. The format is (<i>kind</i> <i>string</i>). For example, <span class="code">(package "org.vpri")</span> is converted to a package namespace named org.vpri.
-<ul>
-<li>Namespace - <tt>(ns <i>string</i>)</tt> is converted to Namespace
-<li>PackageNamespace - <tt>(package <i>string</i>)</tt> is converted to PackageNamespace
-<li>PackageInternalNs - <tt>(internal <i>string</i>)</tt> is converted to PackageInternalNs
-<li>ProtectedNamespace - <tt>(protected <i>string</i>)</tt> is converted to ProtectedNamespace
-<li>ExplicitNamespace - <tt>(explicit <i>string</i>)</tt> is converted to ExplicitNamespace
-<li>StaticProtectedNs - <tt>(static <i>string</i>)</tt> is converted to StaticProtectedNs
-<li>PrivateNs - <tt>(private <i>string</i>)</tt> is converted to PrivateNs
-</ul>
-<li>namespace set - Namespace sets can not be described as literal.
-Instead, they are declared in a constant pool of ns_set-section at
-first, and be made reference by index e.g. <span class="code">(ns_set
-1)</span>.
-<li>multiname - Some list expressions are converted to multiname (symbol) in AVM2.
-<ul>
-<li>QName - <tt>(<i>namespace</i> <i>string</i>)</tt> is converted as QName e.g. <span class="code">((package "flash.display") "Sprite"))</span>
-<li>RTQName - is not supported.
-<li>RTQNameL - is not supported.
-<li>Multiname - <tt>((ns_set <i>integer</i>) <i>string</i>)</tt> is converted as a Multiname e.g. <span class="code">((ns_set 1) "addChild")</span>
-<li>MultinameL - is not supported.
-</ul>
-</ul>
-
-<h2>Syntax</h2>
-
-The syntax of ASM-form is explained. ABCSX uses same symbol names as
-"ActionScript Virtual Machine 2 (AVM2) Overview" unless it is too
-strange. Especially, underline delimited names and capital names are
-derived from it.
-
-<h3>ASM-form</h3>
-<p><tt>(asm
-  <i>[ns_set-section]</i>
-  <i>method-section</i>
-  <i>[instance-section]</i>
-  <i>[class-section]</i>
-  <i>script-section)</i>
-</tt></p>
-
-<p>ASM-form begins with a symbol "asm", and contents are followed. ns_set-section, instance-section, and class-section are optional.
-
-<h3>ns_set-section</h3>
-
-<p><tt>(ns_set (ns_set <i>namespace ...</i>) ...)</tt></p>
-<p>
-Ns_set-section will be a part of constant pool, and it is only
-necessary if namespace set is used in other part of the ASM-form. You
-can not specify a namespace set directly as a literal, but you need to
-define it in  ns_set-section and point it with the index number.
-
-<p>Ns_set-section begins with a symbol
-<tt>ns_set</tt> and a list of ns_set_info is followed.  A ns_set_info
-begins with a symbol <tt>ns_set</tt> and it includes a list of
-namespaces.  A namespace set is referred by one-based index from other
-part. For example, the first namespace set is referred as <tt>(ns_set
-1)</tt>.
 
-<h3>method-section</h3>
+  <p>Although ABC-form is generated from ASM-form mechanically, the
+  reason of providing high level ASM-form is to ease writing a
+  compiler. Using ASM-form, a compiler writer doesn't have to care
+  about to build a constant pool, or code hint information (AVM2
+  requires a frame information like stack size and register size
+  used in a code).</p>
 
-<p><tt>(method (<i>signature-subsection code-subsection</i>) ...)</tt></p>
+  <h2>Background</h2>
 
-<p>
-Method-section includes a list of pairs of signature and code. A
-method is referred by zero-based index. For example, the first method
-is referred as <tt>(method 0)</tt>.
+  <p>One of goals of the STEPS project and COLA programming
+  language is to provide full controll of computer environment from
+  application level to machine language lavel, so that users could
+  experiment and design their own programming language to best fit
+  to the task. It also will be used as a basis of next generation
+  of EToys programming environment for kids.</p>
 
-<h4>signature-subsection</h4>
+  <p>We chose Adobe Flash Player as one of the platforms of the
+  system because of its popularity and usability. Using Flash's
+  virtual machin AVM2 on a web browser, we could deliver our
+  programming environment without concerning about installation
+  process or security.</p>
 
-<p><tt>(signature (return_type <i>multiname</i>)
-    (param_type (<i>multiname</i> ...))
-    (name <i>string</i>)
-    (flags <i>integer</i>)
-    (options (<i>option</i>...))
-    (param_names (<i>multiname</i> ...)))
-   </tt>
+  <p>AVM2 has some disadvantages compared to Java VM. AVM2 lacks
+  multi task support, and its dynamic dispatching function is
+  relatively slow. But the startup speed and memory footage are
+  good, and these aspects are essential to casual users. Especially
+  AVM2 will be good platform to implement EToys.</p>
 
-<p>Signature-subsection describes method's signature. If * is
-  specified at the return_type. It is treated as Any Type. A name is
-  not used as a method name in a program. In a typical case, methods
-  are explicitly bound to named slots in initialization code at
-  script-section or object constructor.
+  <p>ABCSX is designed to be a backend module for COLA, command
+  line assembler / disassember, and a Scheme library. While it is a
+  part of COLA/ABC compiler, it is also useful as a tool to examine
+  and debug ABC binary file.</p>
 
-<h4>code-subsection</h4>
+  <h2>Usage</h2>
 
-<p><tt>(code (<i>instructions</i>...)) </tt>
-<p>Code subsection describes a sequence of instruction code of the
-method. A label is specified as a symbol, and normal instruction is
-specified as a list as:
+  <h3>Command line tool</h3>
 
-<p><tt>([<i>offset-number</i>] <i>inst-name args</i> ...)</tt></p>
+  <p>A version of ABCSX is publicly available on a github
+  repository <a href=
+  "http://github.com/propella/abcsx">http://github.com/propella/abcsx</a>.
+  It includes command line tools run on PLT-Scheme. There are also
+  example programs at examples/ directory. The assembler and
+  disassember use same file format and the assembler asm.ss can
+  read an output file generated by disasembler dump.ss.</p>
 
-offset-number is optional and used just as a place holder. It can be a
-integer or symbol <tt>_</tt>. ABCSX's disassember put a byte offset
-number at this place, but the assembler ignores it.
+  <dl>
+    <dt class="code">asm.ss <i>filename.sx</i></dt>
 
-<h3>metadata-section</h3>
+    <dd>Generate ABC binary file from ASM-form or ABC-form. The
+    output file name is filename.sx.abc.</dd>
 
-<p><tt>(metadata (<i>metadata_info</i> ...))</tt></p>
+    <dt class="code">dump.ss [-abc] <i>filename.abc</i></dt>
 
-Metadata-section describes a list of metadata entries.
+    <dd>Desassemble an abc file. The output is printed to stdout.
+    If -abc option is specified, ABC-form is chosen.</dd>
 
-<h3>instance-section</h3>
+    <dt class="code">runasm.sh <i>filename.sx</i></dt>
 
-<p><tt>(instance (((name <i>multiname</i>)
-                   (super_name <i>multiname</i>)
-                   (flags <i>integer</i>)
-                   (interface (<i>multiname</i> ...))
-                   (iinit <i>method</i>)
-                   (trait (<i>trait_info</i> ...)) ...)))
-</tt></p>
+    <dd>Assemble ASM-form or ABC-form and execute it by avmshell.
+    It requires avmshell installed. Avmshell is included in Tamarin
+    VM's source tree.</dd>
 
-<p>
-Instance-section describes a list of class definitions. Class members
-are defined by a list of trait_info.
+    <dt class="code">swf_abc.erl <i>width height classname
+    abcfile.abc</i></dt>
 
-<h3>class-section</h3>
+    <dd>A helper program to generate a flash file from an abc file.
+    It requires Erlang.</dd>
+  </dl>
 
-<p><tt>(class (((cinit <i>method</i>) (trait (<i>trait_info</i>...))) ...))</tt></p>
+  <h3>Function</h3>
 
-<p>Class-section describes a list of static members of class
-definition. The number of this list is same as instance-section, and
-each entry of class-section corresponds to each entry in
-instance-section. A definition consists of a class initializer and
-trait_info definitions.
+  <dl>
+    <dt><span class="code">(write-asm <i>list</i>
+    <i>port</i>)</span> procedure</dt>
 
-<h3>script-section</h3>
+    <dd>Assemble ASM- or ABC-form to a binary stream.</dd>
 
-<p><tt>(script (((init <i>method</i>) (trait (<i>trait_info</i>...))) ...))</tt></p>
+    <dt><span class="code">(read-asm <i>port</i>)</span>
+    procedure</dt>
 
-<p>Script-section defines a list of static functions. It is also used
-as a program's startup code. Once the virtual machine reads a program,
-the last entry of script-section is invoked. Each entry consists of a
-method reference and a list of trait_info. Trait_info is used as a
-function's environment.
+    <dd>Disassemble a binary stream to ASM-form.</dd>
 
+    <dt><span class="code">(from-asm <i>list</i>)</span>
+    procedure</dt>
 
-<h3>trait_info</h3>
+    <dd>Convert ASM-form to ABC-form. This is a part of process of
+    assemble. Each literal value is replaced to a reference, and a
+    constant pool is created</dd>
 
-<p>Trait_info defines a fixed property of an object, class, or
-method. ABCSX only supports Trait_Slot and Trait_Class.
+    <dt><span class="code">(to-asm <i>list</i>)</span>
+    procedure</dt>
 
-<h4>Trait_Slot</h4>
+    <dd>Convert ABC-form to ASM-form. This is a part of process of
+    disassemble. Each constant reference in the ABC-form is
+    replaced to a literal value based on the constant pool.</dd>
+  </dl>
 
-<p><tt>((kind slot) (name <i>multiname</i>) (slot_id <i>integer</i>) (type_name <i>multiname</i>) (vindex <i>integer</i>) (vkind <i>integer</i>) (metadata (<i>metadata_info</i>...)))</tt></p>
+  <h2>Data Type</h2>AVM2's data is expressed as scheme expression
+  in ABCSX. In ASM-form Data conversion has subtle context
+  dependency in code-subsection.
 
-Trait_Slot defines a named slot in the context.
+  <ul>
+    <li>integer - An integer value in Scheme is converted to AVM2
+    integer value depend on the context.
 
-<h4>Trait_Class</h4>
+      <ul>
+        <li>int (s32) - In code-subsection, an integer is converted
+        to a signed 32 bit integer if the opcode requires integer
+        e.g. <tt>pushint</tt>.</li>
 
-<p><tt>((kind class) (name <i>multiname</i>) (slot_id <i>integer</i>)
-     (classi <i>class</i>) (metadata (<i>metadata_info</i>...)))</tt></p>
+        <li>uint (u32) - In code-subsection, an integer is
+        converted to a unsigned 32 bit integer if the opcode
+        requires integer e.g. <tt>pushuint</tt>.</li>
 
-Trait_Class defines a named slot with a class in the context.
+        <li>u30 - An integer is converted to a unsigned 30 bit
+        integer in AVM2 anywhere else.</li>
+      </ul>
+    </li>
 
-<h3>metadata_info</h3>
+    <li>double (d64) - A floating point number value is converted
+    to a 64-bit double precision IEEE 754 value.</li>
 
-<p><tt>((name <i>string</i>) (items (((key <i>string</i>) (value <i>string</i>)) ...)))</tt></p>
+    <li>string - A String is converted string value in AVM2.</li>
 
-Metadata_info defines an entry including arbitrary key/value pairs.
+    <li>namespace - Some list expressions are converted to
+    namespace in AVM2. The format is (<i>kind</i> <i>string</i>).
+    For example, <span class="code">(package "org.vpri")</span> is
+    converted to a package namespace named org.vpri.
 
-<h2>Example</h2>
+      <ul>
+        <li>Namespace - <tt>(ns <i>string</i>)</tt> is converted to
+        Namespace</li>
 
-As a complete example, GUI version of "Hello World!" program is shown
-with a commentary. This file is available
-at <tt>examples/textField.sx</tt> on the source tree.
+        <li>PackageNamespace - <tt>(package <i>string</i>)</tt> is
+        converted to PackageNamespace</li>
 
-<pre>
+        <li>PackageInternalNs - <tt>(internal <i>string</i>)</tt>
+        is converted to PackageInternalNs</li>
+
+        <li>ProtectedNamespace - <tt>(protected <i>string</i>)</tt>
+        is converted to ProtectedNamespace</li>
+
+        <li>ExplicitNamespace - <tt>(explicit <i>string</i>)</tt>
+        is converted to ExplicitNamespace</li>
+
+        <li>StaticProtectedNs - <tt>(static <i>string</i>)</tt> is
+        converted to StaticProtectedNs</li>
+
+        <li>PrivateNs - <tt>(private <i>string</i>)</tt> is
+        converted to PrivateNs</li>
+      </ul>
+    </li>
+
+    <li>namespace set - Namespace sets can not be described as
+    literal. Instead, they are declared in a constant pool of
+    ns_set-section at first, and be made reference by index e.g.
+    <span class="code">(ns_set 1)</span>.</li>
+
+    <li>multiname - Some list expressions are converted to
+    multiname (symbol) in AVM2.
+
+      <ul>
+        <li>QName - <tt>(<i>namespace</i> <i>string</i>)</tt> is
+        converted as QName e.g. <span class="code">((package
+        "flash.display") "Sprite"))</span></li>
+
+        <li>RTQName - is not supported.</li>
+
+        <li>RTQNameL - is not supported.</li>
+
+        <li>Multiname - <tt>((ns_set <i>integer</i>)
+        <i>string</i>)</tt> is converted as a Multiname e.g.
+        <span class="code">((ns_set 1) "addChild")</span></li>
+
+        <li>MultinameL - is not supported.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Syntax</h2>The syntax of ASM-form is explained. ABCSX uses
+  same symbol names as "ActionScript Virtual Machine 2 (AVM2)
+  Overview" unless it is too strange. Especially, underline
+  delimited names and capital names are derived from it.
+
+  <h3>ASM-form</h3>
+
+  <p><tt>(asm <i>[ns_set-section]</i> <i>method-section</i>
+  <i>[instance-section]</i> <i>[class-section]</i>
+  <i>script-section)</i></tt></p>
+
+  <p>ASM-form begins with a symbol "asm", and contents are
+  followed. ns_set-section, instance-section, and class-section are
+  optional.</p>
+
+  <h3>ns_set-section</h3>
+
+  <p><tt>(ns_set (ns_set <i>namespace ...</i>) ...)</tt></p>
+
+  <p>Ns_set-section will be a part of constant pool, and it is only
+  necessary if namespace set is used in other part of the ASM-form.
+  You can not specify a namespace set directly as a literal, but
+  you need to define it in ns_set-section and point it with the
+  index number.</p>
+
+  <p>Ns_set-section begins with a symbol <tt>ns_set</tt> and a list
+  of ns_set_info is followed. A ns_set_info begins with a symbol
+  <tt>ns_set</tt> and it includes a list of namespaces. A namespace
+  set is referred by one-based index from other part. For example,
+  the first namespace set is referred as <tt>(ns_set 1)</tt>.</p>
+
+  <h3>method-section</h3>
+
+  <p><tt>(method (<i>signature-subsection code-subsection</i>)
+  ...)</tt></p>
+
+  <p>Method-section includes a list of pairs of signature and code.
+  A method is referred by zero-based index. For example, the first
+  method is referred as <tt>(method 0)</tt>.</p>
+
+  <h4>signature-subsection</h4>
+
+  <p><tt>(signature (return_type <i>multiname</i>) (param_type
+  (<i>multiname</i> ...)) (name <i>string</i>) (flags
+  <i>integer</i>) (options (<i>option</i>...)) (param_names
+  (<i>multiname</i> ...)))</tt></p>
+
+  <p>Signature-subsection describes method's signature. If * is
+  specified at the return_type. It is treated as Any Type. A name
+  is not used as a method name in a program. In a typical case,
+  methods are explicitly bound to named slots in initialization
+  code at script-section or object constructor.</p>
+
+  <h4>code-subsection</h4>
+
+  <p><tt>(code (<i>instructions</i>...))</tt></p>
+
+  <p>Code subsection describes a sequence of instruction code of
+  the method. A label is specified as a symbol, and normal
+  instruction is specified as a list as:</p>
+
+  <p><tt>([<i>offset-number</i>] <i>inst-name args</i>
+  ...)</tt></p>
+
+  <p>offset-number is optional and used just as a place holder. It
+  can be a integer or symbol <tt>_</tt>. ABCSX's disassember put a
+  byte offset number at this place, but the assembler ignores
+  it.</p>
+
+  <h3>metadata-section</h3>
+
+  <p><tt>(metadata (<i>metadata_info</i> ...))</tt></p>
+
+  <p>Metadata-section describes a list of metadata entries.</p>
+
+  <h3>instance-section</h3>
+
+  <p><tt>(instance (((name <i>multiname</i>) (super_name
+  <i>multiname</i>) (flags <i>integer</i>) (interface
+  (<i>multiname</i> ...)) (iinit <i>method</i>) (trait
+  (<i>trait_info</i> ...)) ...)))</tt></p>
+
+  <p>Instance-section describes a list of class definitions. Class
+  members are defined by a list of trait_info.</p>
+
+  <h3>class-section</h3>
+
+  <p><tt>(class (((cinit <i>method</i>) (trait
+  (<i>trait_info</i>...))) ...))</tt></p>
+
+  <p>Class-section describes a list of static members of class
+  definition. The number of this list is same as instance-section,
+  and each entry of class-section corresponds to each entry in
+  instance-section. A definition consists of a class initializer
+  and trait_info definitions.</p>
+
+  <h3>script-section</h3>
+
+  <p><tt>(script (((init <i>method</i>) (trait
+  (<i>trait_info</i>...))) ...))</tt></p>
+
+  <p>Script-section defines a list of static functions. It is also
+  used as a program's startup code. Once the virtual machine reads
+  a program, the last entry of script-section is invoked. Each
+  entry consists of a method reference and a list of trait_info.
+  Trait_info is used as a function's environment.</p>
+
+  <h3>trait_info</h3>
+
+  <p>Trait_info defines a fixed property of an object, class, or
+  method. ABCSX only supports Trait_Slot and Trait_Class.</p>
+
+  <h4>Trait_Slot</h4>
+
+  <p><tt>((kind slot) (name <i>multiname</i>) (slot_id
+  <i>integer</i>) (type_name <i>multiname</i>) (vindex
+  <i>integer</i>) (vkind <i>integer</i>) (metadata
+  (<i>metadata_info</i>...)))</tt></p>
+
+  <p>Trait_Slot defines a named slot in the context.</p>
+
+  <h4>Trait_Class</h4>
+
+  <p><tt>((kind class) (name <i>multiname</i>) (slot_id
+  <i>integer</i>) (classi <i>class</i>) (metadata
+  (<i>metadata_info</i>...)))</tt></p>
+
+  <p>Trait_Class defines a named slot with a class in the
+  context.</p>
+
+  <h3>metadata_info</h3>
+
+  <p><tt>((name <i>string</i>) (items (((key <i>string</i>) (value
+  <i>string</i>)) ...)))</tt></p>
+
+  <p>Metadata_info defines an entry including arbitrary key/value
+  pairs.</p>
+
+  <h2>Example</h2>
+
+  <p>As a complete example, A GUI version of "Hello World!" program
+  is shown with commentary. This file is available at
+  <tt>examples/textField.sx</tt> on the source tree.</p>
+  <pre>
 (asm
  (ns_set
   ((ns_set (package "") (package "flash.text"))))
-</pre>
-A ASM-form begins with a symbol <tt>asm</tt>, and a ns_set-section
-follows if necessary. This example declare one namespace set including
-package namespaces <tt>""</tt> and <tt>"flash.text"</tt>
-as <tt>(ns_set 1)</tt>. Ns_set's index number starts with 1 because
-this is a member of constant pool. Other kind of index number (method,
-class) starts with 0.
-
-<pre>
+</pre>A ASM-form begins with a symbol <tt>asm</tt>, and a
+ns_set-section follows if necessary. This example declare one
+namespace set including package namespaces <tt>""</tt> and
+<tt>"flash.text"</tt> as <tt>(ns_set 1)</tt>. Ns_set's index number
+starts with 1 because this is a member of constant pool. Other kind
+of index number (method, class) starts with 0.
+  <pre>
  (method
   (((signature ((return_type *) (param_type ()) (name "")
-		(flags 0) (options ()) (param_names ())))
+                (flags 0) (options ()) (param_names ())))
     (code
      ((returnvoid))))
 </pre>
-The first method is reffered as <tt>(method 0)</tt>. It is used as a
-class initializer in the class-section, but nothing to do in this
-case.
-<pre>
+
+  <p>The first method is reffered as <tt>(method 0)</tt>. It is
+  used as a class initializer in the class-section, but nothing to
+  do in this case.</p>
+  <pre>
    ((signature ((return_type *) (param_type ()) (name "")
-		(flags 0) (options ()) (param_names ())))
+                (flags 0) (options ()) (param_names ())))
     (code
      ((getlocal_0)
       (pushscope)
@@ -427,13 +492,15 @@ case.
       (pop)
       (returnvoid))))
 </pre>
-The second method is used in the instance-section as constructor. It
-makes an instance of <tt>flash.text.TextField</tt> and set "Hello,
-World!" to the property named <tt>text</tt>. Finally, this instance is
-added to this object.
-<pre>
+
+  <p>The second method is used in the instance-section as
+  constructor. It makes an instance of
+  <tt>flash.text.TextField</tt> and set "Hello, World!" to the
+  property named <tt>text</tt>. Finally, this instance is added to
+  this object.</p>
+  <pre>
    ((signature ((return_type *) (param_type ()) (name "")
-		(flags 0) (options ()) (param_names ())))
+                (flags 0) (options ()) (param_names ())))
     (code
      ((getlocal_0)
       (pushscope)
@@ -452,10 +519,12 @@ added to this object.
       (initproperty ((package "") "textField"))
       (returnvoid))))))
 </pre>
-The third method is used as the startup script. It creates an
-environment and initialize a new class defined in instance-section and
-class-section by <tt>newclass</tt> instruction.
-<pre>
+
+  <p>The third method is used as the startup script. It creates an
+  environment and initialize a new class defined in
+  instance-section and class-section by <tt>newclass</tt>
+  instruction.</p>
+  <pre>
  (instance
   (((name ((package "") "textField"))
     (super_name ((package "flash.display") "Sprite"))
@@ -464,15 +533,14 @@ class-section by <tt>newclass</tt> instruction.
     (iinit (method 1))
     (trait ()))))
  (class (((cinit (method 0)) (trait ()))))
-</pre>
-Instance-section and class section define classes. In this case, A
-class named <tt>textField</tt> is defined as a subclass
-of <tt>flash.display.Sprite</tt>. When a SWF file is created from ABC
-file, a SymbolClass tag in the SWF creates association between a class
-name defined here and the main timeline of the SWF. In ABCSX tool set,
-script <tt>swf_abc.erl</tt>'s third argument does this task.
-
-<pre>
+</pre>Instance-section and class section define classes. In this
+case, A class named <tt>textField</tt> is defined as a subclass of
+<tt>flash.display.Sprite</tt>. When a SWF file is created from ABC
+file, a SymbolClass tag in the SWF creates association between a
+class name defined here and the main timeline of the SWF. In ABCSX
+tool set, script <tt>swf_abc.erl</tt>'s third argument does this
+task.
+  <pre>
  (script
   (((init (method 2))
     (trait
@@ -483,18 +551,22 @@ script <tt>swf_abc.erl</tt>'s third argument does this task.
        (metadata ()))))))))
 </pre>
 
-Script-section defines the startup script and predefined named slot.
+  <p>Script-section defines the startup script and predefined named
+  slot.</p>
 
-<h2>References</h2>
-<ul>
-<li>ABCSX github
-repository. <a href="http://github.com/propella/abcsx">http://github.com/propella/abcsx</a></li>
-<li>ActionScript Virtual Machine 2 (AVM2) Overview. <a href=
-"http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf">
-http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf</a></li>
-<li>Steps Toward the Reinvention of Programming (First Year
-Progress Report). <a href=
-"http://www.vpri.org/pdf/tr2007008_steps.pdf">http://www.vpri.org/pdf/tr2007008_steps.pdf</a></li>
-</ul>
+  <h2>References</h2>
+
+  <ul>
+    <li>ABCSX github repository. <a href=
+    "http://github.com/propella/abcsx">http://github.com/propella/abcsx</a></li>
+
+    <li>ActionScript Virtual Machine 2 (AVM2) Overview. <a href=
+    "http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf">
+    http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf</a></li>
+
+    <li>Steps Toward the Reinvention of Programming (First Year
+    Progress Report). <a href=
+    "http://www.vpri.org/pdf/tr2007008_steps.pdf">http://www.vpri.org/pdf/tr2007008_steps.pdf</a></li>
+  </ul>
 </body>
 </html>
