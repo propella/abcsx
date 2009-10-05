@@ -43,15 +43,16 @@
 
   <h2>Overview</h2>
 
-  <p>ABCSX is an assembler and disassember for the ActionScript
-  Virtual Machine 2 (AVM2) and the ActionScript Byte Code (ABC). It
-  runs on both Cola/Amino language and PLT-Shcheme. The syntax
-  consists of s-expressions and a program can be constructed with
-  normal list operations in Scheme like language. The goal of this
-  utility is to build a high level language running on AVM2 by
-  Adobe Flash Player. To get the idea, "Hello World!" programs for
-  both and abcasm (a standard assembler utility consisted in the
-  AVM2 source tree) are shown.</p>
+  <p>ABCSX is an assembler and disassembler for the ActionScript
+  Virtual Machine 2 (AVM2) <a href="#AVM2">[1]</a> and the
+  ActionScript Byte Code (ABC). It runs on Cola/Amino language or
+  PLT-Scheme. The syntax consists of s-expressions and a program
+  can be constructed with normal list operations in Scheme like
+  language. The goal of this utility is to build a high level
+  language compiler for Adobe Flash Player. To get the idea, "Hello
+  World!" programs for both ABCSX and abcasm (a standard assembler
+  utility consisted in the AVM2 source tree <a href=
+  "#tamarin">[4]</a>) are shown.</p>
   <pre>
 ;;;; A "Hello World!" program in ABCSX ASM-form
 (asm
@@ -82,14 +83,16 @@ function hello():*
 </pre>
 
   <p>Although a program written in abcasm syntax is more concise
-  than ABCSX, semantics of the program is ambiguous. For example,
-  in spite of each name (symbol) in ABC belongs to namespace(s),
-  but the syntax of abcasm doesn't describe it clearly. In this
-  case, "print" is interpreted to a Multiple Namespace Name with a
-  namespace set including PackageNamespace with no name. This
-  implicit behavior might be useful for writing a program by hand,
-  but not necessary for a machine generated code. ABCSX rather
-  takes a direction toward verbose but unambiguous style.</p>
+  than ABCSX, the semantics is rather ambiguous. For example, in
+  spite of each symbol name in ABC belongs to namespace(s), the
+  syntax of abcasm doesn't describe it clearly. In this case,
+  "print" is implicitly interpreted to a Multiple Namespace Name
+  with a namespace set including PackageNamespace with no name. In
+  case of ABCSX, it is explicitly represented as PackageNamespace
+  with no name by <tt>((package "") "print")</tt>. This implicit
+  behavior might be useful for writing a program by hand, but not
+  necessary for a machine generated code. ABCSX rather takes a
+  direction toward verbose but unambiguous style.</p>
 
   <p>ABCSX offers two forms of syntax. ASM-form is higher level
   syntax introduced above. ABC-form is identical to an abstract
@@ -128,27 +131,25 @@ function hello():*
     (trait ())))))
 </pre>
 
-  <p>Although ABC-form is generated from ASM-form mechanically, the
-  reason of providing high level ASM-form is to ease writing a
-  compiler. Using ASM-form, a compiler writer doesn't have to care
-  about to build a constant pool, or code hint information (AVM2
-  requires a frame information like stack size and register size
-  used in a code).</p>
+  <p>Using ASM-form, a compiler writer doesn't have to care about
+  building a constant pool, or code hint information (AVM2 requires
+  a frame information like stack size and register size used in a
+  code).</p>
 
   <h2>Background</h2>
 
-  <p>One of goals of the STEPS project and COLA programming
-  language is to provide full controll of computer environment from
-  application level to machine language lavel, so that users could
-  experiment and design their own programming language to best fit
-  to the task. It also will be used as a basis of next generation
-  of EToys programming environment for kids.</p>
+  <p>One of goals of the STEPS project <a href="#STEPS">[3]</a> and
+  COLA programming language is to provide full control of computer
+  environment from application level to machine language level, so
+  that users could experiment and design their own programming
+  language best fit to their task. It also will be used as a basis
+  of next generation of EToys programming environment for kids.</p>
 
-  <p>We chose Adobe Flash Player as one of the platforms of the
-  system because of its popularity and usability. Using Flash's
-  virtual machin AVM2 on a web browser, we could deliver our
-  programming environment without concerning about installation
-  process or security.</p>
+  <p>We chose Adobe Flash Player as one of platforms of the system
+  because of its popularity and usability. Using Flash's virtual
+  machine on a web browser, we could deliver our programming
+  environment without concerning about installation or security
+  issue.</p>
 
   <p>AVM2 has some disadvantages compared to Java VM. AVM2 lacks
   multi task support, and its dynamic dispatching function is
@@ -156,39 +157,39 @@ function hello():*
   good, and these aspects are essential to casual users. Especially
   AVM2 will be good platform to implement EToys.</p>
 
-  <p>ABCSX is designed to be a backend module for COLA, command
-  line assembler / disassember, and a Scheme library. While it is a
-  part of COLA/ABC compiler, it is also useful as a tool to examine
-  and debug ABC binary file.</p>
+  <p>ABCSX is designed to be a back end module for COLA, command
+  line assembler / disassembler, and a Scheme library. While it is
+  a part of COLA/ABC compiler, it also can be used as a command
+  line tool to examine and debug ABC binary file.</p>
 
   <h2>Usage</h2>
 
   <h3>Command line tool</h3>
 
-  <p>A version of ABCSX is publicly available on a github
-  repository <a href=
-  "http://github.com/propella/abcsx">http://github.com/propella/abcsx</a>.
-  It includes command line tools run on PLT-Scheme. There are also
-  example programs at examples/ directory. The assembler and
-  disassember use same file format and the assembler asm.ss can
-  read an output file generated by disasembler dump.ss.</p>
+  <p>A version of ABCSX is publicly available on the github
+  repository <a href="#ABCSX">[2]</a>. It includes command line
+  tools run on PLT-Scheme. There are also example programs at
+  <tt>examples/</tt> directory. The assembler and disassembler use
+  same file format and the assembler <tt>asm.ss</tt> can read an
+  output file generated by disassembler <tt>dump.ss</tt>.</p>
 
   <dl>
     <dt class="code">asm.ss <i>filename.sx</i></dt>
 
-    <dd>Generate ABC binary file from ASM-form or ABC-form. The
+    <dd>Generate an ABC binary file from ASM-form or ABC-form. The
     output file name is filename.sx.abc.</dd>
 
     <dt class="code">dump.ss [-abc] <i>filename.abc</i></dt>
 
-    <dd>Desassemble an abc file. The output is printed to stdout.
-    If -abc option is specified, ABC-form is chosen.</dd>
+    <dd>Disassemble an ABC binary file. The output is printed to
+    stdout. If <tt>-abc</tt> option is specified, ABC-form is
+    chosen as output format.</dd>
 
     <dt class="code">runasm.sh <i>filename.sx</i></dt>
 
     <dd>Assemble ASM-form or ABC-form and execute it by avmshell.
     It requires avmshell installed. Avmshell is included in Tamarin
-    VM's source tree.</dd>
+    VM's source tree <a href="#tamarin">[4]</a>.</dd>
 
     <dt class="code">swf_abc.erl <i>width height classname
     abcfile.abc</i></dt>
@@ -225,12 +226,14 @@ function hello():*
     replaced to a literal value based on the constant pool.</dd>
   </dl>
 
-  <h2>Data Type</h2>AVM2's data is expressed as scheme expression
-  in ABCSX. In ASM-form Data conversion has subtle context
-  dependency in code-subsection.
+  <h2>Data Type</h2>
+
+  <p>ABC's data is expressed as scheme expression in ABCSX. In
+  ASM-form, data conversion has subtle context dependency in
+  code-subsection.</p>
 
   <ul>
-    <li>integer - An integer value in Scheme is converted to AVM2
+    <li>integer - An integer value in Scheme is converted to ABC
     integer value depend on the context.
 
       <ul>
@@ -243,19 +246,20 @@ function hello():*
         requires integer e.g. <tt>pushuint</tt>.</li>
 
         <li>u30 - An integer is converted to a unsigned 30 bit
-        integer in AVM2 anywhere else.</li>
+        integer in ABC anywhere else.</li>
       </ul>
     </li>
 
     <li>double (d64) - A floating point number value is converted
     to a 64-bit double precision IEEE 754 value.</li>
 
-    <li>string - A String is converted string value in AVM2.</li>
+    <li>string - A string is converted a string value in ABC.</li>
 
     <li>namespace - Some list expressions are converted to
-    namespace in AVM2. The format is (<i>kind</i> <i>string</i>).
-    For example, <span class="code">(package "org.vpri")</span> is
-    converted to a package namespace named org.vpri.
+    namespace values in ABC. The format is (<i>kind</i>
+    <i>string</i>). For example, <span class="code">(package
+    "org.vpri")</span> is converted to a package namespace named
+    <tt>"org.vpri"</tt>.
 
       <ul>
         <li>Namespace - <tt>(ns <i>string</i>)</tt> is converted to
@@ -281,13 +285,13 @@ function hello():*
       </ul>
     </li>
 
-    <li>namespace set - Namespace sets can not be described as
-    literal. Instead, they are declared in a constant pool of
+    <li>namespace set - A namespace set can not be described as a
+    literal. Instead, it is declared in a constant pool of
     ns_set-section at first, and be made reference by index e.g.
     <span class="code">(ns_set 1)</span>.</li>
 
     <li>multiname - Some list expressions are converted to
-    multiname (symbol) in AVM2.
+    multiname (symbol) in ABC.
 
       <ul>
         <li>QName - <tt>(<i>namespace</i> <i>string</i>)</tt> is
@@ -310,15 +314,15 @@ function hello():*
   <h2>Syntax</h2>The syntax of ASM-form is explained. ABCSX uses
   same symbol names as "ActionScript Virtual Machine 2 (AVM2)
   Overview" unless it is too strange. Especially, underline
-  delimited names and capital names are derived from it.
+  delimited names and capital names are derived from the document.
 
   <h3>ASM-form</h3>
 
   <p><tt>(asm <i>[ns_set-section]</i> <i>method-section</i>
-  <i>[instance-section]</i> <i>[class-section]</i>
-  <i>script-section)</i></tt></p>
+  <i>[metadata-section]</i> <i>[instance-section]</i>
+  <i>[class-section]</i> <i>script-section)</i></tt></p>
 
-  <p>ASM-form begins with a symbol "asm", and contents are
+  <p>ASM-form begins with a symbol <tt>asm</tt>, and contents are
   followed. ns_set-section, instance-section, and class-section are
   optional.</p>
 
@@ -335,7 +339,7 @@ function hello():*
   <p>Ns_set-section begins with a symbol <tt>ns_set</tt> and a list
   of ns_set_info is followed. A ns_set_info begins with a symbol
   <tt>ns_set</tt> and it includes a list of namespaces. A namespace
-  set is referred by one-based index from other part. For example,
+  set is referred with one-based index by other part. For example,
   the first namespace set is referred as <tt>(ns_set 1)</tt>.</p>
 
   <h3>method-section</h3>
@@ -356,9 +360,9 @@ function hello():*
 
   <p>Signature-subsection describes method's signature. If * is
   specified at the return_type. It is treated as Any Type. A name
-  is not used as a method name in a program. In a typical case,
-  methods are explicitly bound to named slots in initialization
-  code at script-section or object constructor.</p>
+  entry is not used as a method name in a program. In a typical
+  case, methods are explicitly bound to named slots in
+  initialization code at script-section or object constructor.</p>
 
   <h4>code-subsection</h4>
 
@@ -372,7 +376,7 @@ function hello():*
   ...)</tt></p>
 
   <p>offset-number is optional and used just as a place holder. It
-  can be a integer or symbol <tt>_</tt>. ABCSX's disassember put a
+  can be a integer or symbol <tt>_</tt>. ABCSX's disassembler put a
   byte offset number at this place, but the assembler ignores
   it.</p>
 
@@ -399,9 +403,9 @@ function hello():*
 
   <p>Class-section describes a list of static members of class
   definition. The number of this list is same as instance-section,
-  and each entry of class-section corresponds to each entry in
-  instance-section. A definition consists of a class initializer
-  and trait_info definitions.</p>
+  and each entry of class-section corresponds to instance-section.
+  A definition consists of a class initializer and trait_info
+  definitions.</p>
 
   <h3>script-section</h3>
 
@@ -445,6 +449,33 @@ function hello():*
   <p>Metadata_info defines an entry including arbitrary key/value
   pairs.</p>
 
+  <h2>Current Status</h2>
+
+  <p>Currently, only major elements in AVM2 are implemented.</p>
+
+  <ul>
+    <li>All primitive data types are implemented.</li>
+
+    <li>75 instructions (about a half of the whole instruction set)
+    are implemented.</li>
+
+    <li>Only QName (Qualified Name) and Multiname (Multiple
+    Namespace Name) are implemented.</li>
+
+    <li>Optional parameters or parameter names are not
+    implemented.</li>
+
+    <li>Trait_Method, Trait_Getter, Trait_Setter, Trait_Function,
+    or Trait_Const are not implemented.</li>
+
+    <li>Exception is not implemented.</li>
+  </ul><!--
+      <h2>Releated Work</h2>
+- Sassy: http://home.earthlink.net/~krautj/sassy/sassy.html
+- format.abc: ActionScript Bytecode in HaXe http://haxe.org/com/libs/format/abc
+- scheme-abc: http://github.com/mzp/scheme-abc
+-->
+
   <h2>Example</h2>
 
   <p>As a complete example, A GUI version of "Hello World!" program
@@ -454,7 +485,7 @@ function hello():*
 (asm
  (ns_set
   ((ns_set (package "") (package "flash.text"))))
-</pre>A ASM-form begins with a symbol <tt>asm</tt>, and a
+</pre>An ASM-form begins with a symbol <tt>asm</tt>, and a
 ns_set-section follows if necessary. This example declare one
 namespace set including package namespaces <tt>""</tt> and
 <tt>"flash.text"</tt> as <tt>(ns_set 1)</tt>. Ns_set's index number
@@ -468,7 +499,7 @@ of index number (method, class) starts with 0.
      ((returnvoid))))
 </pre>
 
-  <p>The first method is reffered as <tt>(method 0)</tt>. It is
+  <p>The first method is referred as <tt>(method 0)</tt>. It is
   used as a class initializer in the class-section, but nothing to
   do in this case.</p>
   <pre>
@@ -493,11 +524,11 @@ of index number (method, class) starts with 0.
       (returnvoid))))
 </pre>
 
-  <p>The second method is used in the instance-section as
-  constructor. It makes an instance of
+  <p>The second method is later used in the instance-section as
+  class Hello's constructor. It builds an instance of
   <tt>flash.text.TextField</tt> and set "Hello, World!" to the
-  property named <tt>text</tt>. Finally, this instance is added to
-  this object.</p>
+  property named <tt>text</tt>. Finally, the text field is added to
+  this (Hello) object.</p>
   <pre>
    ((signature ((return_type *) (param_type ()) (name "")
                 (flags 0) (options ()) (param_names ())))
@@ -516,7 +547,7 @@ of index number (method, class) starts with 0.
       (newclass 0)
       (popscope)
       (popscope)
-      (initproperty ((package "") "textField"))
+      (initproperty ((package "") "Hello"))
       (returnvoid))))))
 </pre>
 
@@ -526,7 +557,7 @@ of index number (method, class) starts with 0.
   instruction.</p>
   <pre>
  (instance
-  (((name ((package "") "textField"))
+  (((name ((package "") "Hello"))
     (super_name ((package "flash.display") "Sprite"))
     (flags 0)
     (interface ())
@@ -534,18 +565,18 @@ of index number (method, class) starts with 0.
     (trait ()))))
  (class (((cinit (method 0)) (trait ()))))
 </pre>Instance-section and class section define classes. In this
-case, A class named <tt>textField</tt> is defined as a subclass of
-<tt>flash.display.Sprite</tt>. When a SWF file is created from ABC
-file, a SymbolClass tag in the SWF creates association between a
-class name defined here and the main timeline of the SWF. In ABCSX
-tool set, script <tt>swf_abc.erl</tt>'s third argument does this
-task.
+case, A class named <tt>Hello</tt> is defined as a subclass of <tt>
+  flash.display.Sprite</tt>. When a SWF file is created from ABC
+  file, a SymbolClass tag in the SWF creates association between a
+  class name defined here and the main timeline of the SWF. In
+  ABCSX tool set, script <tt>swf_abc.erl</tt>'s third argument does
+  this task.
   <pre>
  (script
   (((init (method 2))
     (trait
      (((kind class)
-       (name ((package "") "textField"))
+       (name ((package "") "Hello"))
        (slot_id 1)
        (classi (class 0))
        (metadata ()))))))))
@@ -557,16 +588,20 @@ task.
   <h2>References</h2>
 
   <ul>
-    <li>ABCSX github repository. <a href=
-    "http://github.com/propella/abcsx">http://github.com/propella/abcsx</a></li>
-
-    <li>ActionScript Virtual Machine 2 (AVM2) Overview. <a href=
+    <li id="AVM2">[1] ActionScript Virtual Machine 2 (AVM2)
+    Overview. <a href=
     "http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf">
     http://www.adobe.com/devnet/actionscript/articles/avm2overview.pdf</a></li>
 
-    <li>Steps Toward the Reinvention of Programming (First Year
-    Progress Report). <a href=
+    <li id="ABCSX">[2] ABCSX github repository. <a href=
+    "http://github.com/propella/abcsx">http://github.com/propella/abcsx</a></li>
+
+    <li id="STEPS">[3] Steps Toward the Reinvention of Programming
+    (First Year Progress Report). <a href=
     "http://www.vpri.org/pdf/tr2007008_steps.pdf">http://www.vpri.org/pdf/tr2007008_steps.pdf</a></li>
+
+    <li id="tamarin">[4] Tamarin Project <a href=
+    "http://www.mozilla.org/projects/tamarin/">http://www.mozilla.org/projects/tamarin/</a></li>
   </ul>
 </body>
 </html>

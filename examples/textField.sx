@@ -3,7 +3,7 @@
 ;; 
 ;; How to make a swf file of this program.
 ;; ../asm.ss textField.sx
-;; ../swf_abc.erl 100 100 textField textField.sx.abc 
+;; ../swf_abc.erl 100 100 Hello textField.sx.abc 
 
 (asm
  (ns_set
@@ -49,10 +49,10 @@
       (newclass 0)
       (popscope)
       (popscope)
-      (initproperty ((package "") "textField"))
+      (initproperty ((package "") "Hello"))
       (returnvoid))))))
  (instance
-  (((name ((package "") "textField"))
+  (((name ((package "") "Hello"))
     (super_name ((package "flash.display") "Sprite"))
     (flags 0)
     (interface ())
@@ -63,7 +63,7 @@
   (((init (method 2))
     (trait
      (((kind class)
-       (name ((package "") "textField"))
+       (name ((package "") "Hello"))
        (slot_id 1)
        (classi (class 0))
        (metadata ()))))))))

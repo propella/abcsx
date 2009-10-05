@@ -17,8 +17,8 @@ test2 :
 
 test3 :
 	./asm.ss examples/textField.sx
-	./swf_abc.erl 100 100 textField examples/textField.sx.abc
-	open textField.swf
+	./swf_abc.erl 100 100 Hello examples/textField.sx.abc
+	open Hello.swf
 
 clean :
 	rm -f *.abc examples/*.abc launcher/*.abc textField.swf
