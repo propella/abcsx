@@ -786,6 +786,18 @@
 
 (define write-exception_info (lambda (x port) (error "exception_info is not supported yet")))
 
+;;; metadata_info writer
+
+(define write-item_info
+  (lambda (x port)
+    (write-id 'string (ref 'key x) port)
+    (write-id 'string (ref 'value x) port)))
+
+(define write-metadata_info
+  (lambda (x port)
+    (write-id 'string (ref 'name x) port)
+    (write-list0 write-item_info (ref 'items x) port)))
+
 ;;; traits_info writer
 
 (define write-trait_slot
@@ -858,18 +870,6 @@
   (lambda (x port)
     (write-id 'method (ref 'cinit x) port)
     (write-list0 write-traits_info (ref 'trait x) port)))
-
-;;; metadata_info writer
-
-(define write-item_info
-  (lambda (x port)
-    (write-id 'string (ref 'key x) port)
-    (write-id 'string (ref 'value x) port)))
-
-(define write-metadata_info
-  (lambda (x port)
-    (write-id 'string (ref 'name x) port)
-    (write-list0 write-item_info (ref 'items x) port)))
 
 ;;; script_info writer
 
