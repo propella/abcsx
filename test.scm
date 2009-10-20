@@ -20,14 +20,6 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
-#lang scheme
-(require srfi/78) ; Lightweight testing
-
-(include "instruction.k")
-(include "abc.k")
-
-(check-set-mode! 'report-failed)
-
 ;;; Test utilities
 
 ; proc is (proc port)
