@@ -86,4 +86,28 @@
 
 (load "instruction.k")
 (load "abc.k")
-(load "test.scm")
+
+;;; read a S-expression file
+(define (read-file infile)
+  (call-with-input-file infile
+    (lambda (port) (read port))))
+
+;;; write a ABC file
+(define (write-file asm outfile)
+  (call-with-output-file outfile
+    (lambda (port)
+      (write-asm asm port))))
+
+(define (asm infile)
+  (let ((outfile (string-append infile ".abc")))
+    (write-file (read-file infile) outfile)))
+
+(define (runtest)
+  (load "test.scm"))
+
+(define main
+  (lambda (args)
+    (if (null? (cdr args))
+	(runtest)
+	(asm (cadr args)))
+    0))
