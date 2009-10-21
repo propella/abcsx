@@ -425,7 +425,7 @@
 ;; The result numbers are used for label index. For example,
 ;; 3 in (3 4 5) is L2 because 3 is the third in reverse order.
 (define find-label
-  (lambda (code) (foldl *find-label '() code)))
+  (lambda (code) (fold *find-label '() code)))
 
 ;; instruction reader
 
@@ -537,7 +537,7 @@
     (if (null? methods)
 	'()
 	(let* ((method-body
-		(findf (lambda (m)
+		(find (lambda (m)
 			 (let ((id (car m))) ; The first element should be '(method id)
 			   (= (cadr id) index)))
 		       method-bodies))
@@ -917,7 +917,7 @@
 	   (spec (hash-ref write-instruction-map inst))
 	   (arg-types (cddr spec))
 	   (arg-values (cdr statement))
-	   (arg-length (foldl instruction-arg-length 0 arg-types arg-values)))
+	   (arg-length (fold instruction-arg-length 0 arg-types arg-values)))
       (add1 arg-length))))
 
 ;; Add into dst-labels if the line is a label (symbol),
@@ -933,7 +933,7 @@
 (define write-label-extract
   (lambda (lines)
     (let ((dst-labels (make-hasheq)))
-      (foldl (lambda (line pos)
+      (fold (lambda (line pos)
 	       (*write-label-extract line pos dst-labels))
 	     0
 	     lines)
@@ -1175,7 +1175,7 @@
     (if found
 	(cont (list type (length found)) dict)
 	(let* ((*pool (cons type  (cons x (cdr pool))))
-	       (*dict (cons *pool (remove pool dict)))
+	       (*dict (cons *pool (delete pool dict)))
 	       (id (length (cdr *pool))))
 	  (cont (list type id) *dict))))))
 

@@ -2,6 +2,7 @@
 ;; ./asm.ss filename.sx
 
 #lang scheme
+(require srfi/1)
 (include "instruction.k")
 (include "abc.k")
 

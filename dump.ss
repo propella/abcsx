@@ -7,6 +7,7 @@
 ;; ./dump.ss -abc filename.abc
 
 #lang scheme
+(require srfi/1)
 (include "instruction.k")
 (include "abc.k")
 

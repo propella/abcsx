@@ -21,11 +21,12 @@
 ;; THE SOFTWARE.
 
 (use srfi-1)
+(use srfi-4)
 (use util.list)
-(use gauche.uvector)
 (use gauche.vport)
 (use binary.io)
-(load "./check.scm") ;; srfi-78 Lightweight testing
+(set! *load-path* (cons "." *load-path*))
+(load "check.scm") ;; srfi-78 Lightweight testing
 
 ;; Arithmetic
 
@@ -83,10 +84,6 @@
   (lambda (n proc)
     (map proc (iota n))))
 
-(define foldl fold) ;; srfi-1
-(define remove delete) ;; srfi-1
-(define findf find) ;; srfi-1
-
-(load "./instruction.k")
-(load "./abc.k")
-(load "./test.scm")
+(load "instruction.k")
+(load "abc.k")
+(load "test.scm")

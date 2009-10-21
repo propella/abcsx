@@ -22,6 +22,7 @@
 
 #lang scheme
 (require srfi/78) ; Lightweight testing
+(require srfi/1)
 
 (include "instruction.k")
 (include "abc.k")

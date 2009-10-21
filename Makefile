@@ -1,7 +1,8 @@
 all : test test1 test2 test3
 
 test :
-	./test.ss
+	./test-plt.ss
+	./test-gauche.scm
 
 test1 : examples/textField.abc
 	./dump.ss examples/textField.abc
@@ -21,7 +22,7 @@ test3 :
 	open Hello.swf
 
 clean :
-	rm -f *.abc examples/*.abc launcher/*.abc textField.swf
+	rm -f *.abc examples/*.abc launcher/*.abc Hello.swf
 
 %.abc : %.as
 #	asc $<
