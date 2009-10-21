@@ -1,6 +1,7 @@
 scheme による abc アセンブラ -*- outline -*-
 
-todo: gauche 対応
+todo: 起動コマンド統一
+todo: gauche dump
 todo: scheme 48 対応
 todo: パラメータ一つの時 (key value) 複数の時 (key value value ..) に統一
 todo: 関数定義引き数付き

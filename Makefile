@@ -1,11 +1,17 @@
+#DUMP=./dump.ss
+#DUMP=./abcsx-gauche.scm -dump
+#ASM=./abcsx-gauche.scm -asm
+DUMP=./abcsx.ss -dump
+ASM=./abcsx.ss -asm
+
 all : test test1 test2 test3
 
 test :
 	./test-plt.ss
-	./test-gauche.scm
+	./abcsx-gauche.scm -test
 
 test1 : examples/textField.abc
-	./dump.ss examples/textField.abc
+	$(DUMP) examples/textField.abc
 
 test2 : 
 	./runasm.sh examples/hello.sx

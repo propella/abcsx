@@ -22,21 +22,123 @@
 
 ;;; Test utilities
 
-; proc is (proc port)
+;; proc is (proc port)
 (define (from-bytes proc bstr)
   (proc (open-input-bytes bstr)))
 
-; proc is (proc obj port)
+;; proc is (proc obj port)
 (define (to-bytes proc obj)
   (call-with-output-bytes (lambda (port) (proc obj port))))
 
-; round trip
-; write-proc is (write-proc obj port)
-; read-proc is (read-proc port)
+;; round trip
+;; write-proc is (write-proc obj port)
+;; read-proc is (read-proc port)
 (define (roundtrip-check write-proc read-proc obj)
   (check
    (let ((bstr (to-bytes write-proc obj)))
      (from-bytes read-proc bstr)) => obj))
+
+;; test data
+
+(define test-abc-data
+  '((constant_pool(
+		   (integer (-10 0 10))
+		   (uinteger (10 20 30))
+		   (double (0.1 0.2 0.3))
+		   (string ("hello" "world" "flash.display"))
+		   (namespace ((private (string 1))
+			       (package (string 3))))
+		   (ns_set ((ns_set (namespace 1))
+			    (ns_set (namespace 1) (namespace 2))))
+		   (multiname (((namespace 2) (string 1))
+			       ((namespace 1) (string 2))))
+		   ))))
+
+(define hello-world-abc
+  '(abc (minor_version 16) (major_version 46)
+    (constant_pool
+     ((integer (1 2 3))
+      (uinteger (10 20 30))
+      (double (0.1 0.2 0.3))
+      (string ("hello" "" "print" "Hello, World!!"))
+      (namespace ((package (string 2)) (private (string 2))))
+      (ns_set ((ns_set (namespace 1) (namespace 2))))
+      (multiname (((ns_set 1) (string 3)) ((namespace 1) (string 3))))))
+    (method
+     (((return_type (multiname 0)) (param_type ()) (name (string 1)) (flags 0) (options ()) (param_names ()))))
+    (metadata ())
+    (instance ())
+    (class ())
+    (script (((init (method 0)) (trait ()))))
+    (method_body
+     (((method 0)
+       (max_stack 2) (local_count 1) (init_scope_depth 0) (max_scope_depth 1)
+       (code
+	((0 getlocal 0)
+	 (2 pushscope)
+	 (3 findpropstrict (multiname 1))
+	 (5 pushstring (string 4))
+	 (7 callproperty (multiname 2) 1)
+	 (10 returnvoid)))
+       (exception ())
+       (trait ()))))))
+
+(define hello-world-asm
+  '(asm
+    (ns_set ((ns_set (package "") (private ""))))
+    (method
+     (((signature
+	((return_type *) (param_type ()) (name "hello") (flags 0) (options ()) (param_names ())))
+       (hint ((max_stack 2) (local_count 1) (init_scope_depth 0) (max_scope_depth 1)))
+       (code
+	((0 getlocal 0)
+	 (2 pushscope)
+	 (3 findpropstrict ((ns_set 1) "print"))
+	 (5 pushstring "Hello, World!!")
+	 (7 callproperty ((package "") "print") 1)
+	 (10 returnvoid)))
+       (trait ())
+       (exception ()))))
+    (instance ())
+    (class ())
+    (script (((init (method 0)) (trait ()))))))
+
+(define hello-world-asm-short
+  '(asm
+    (ns_set ((ns_set (package "") (private ""))))
+    (method
+     (((signature
+	((return_type *) (param_type ()) (name "hello") (flags 0) (options ()) (param_names ())))
+       (code
+	((0 getlocal 0)
+	 (2 pushscope)
+	 (3 findpropstrict ((ns_set 1) "print"))
+	 (5 pushstring "Hello, World!!")
+	 (7 callproperty ((package "") "print") 1)
+	 (10 returnvoid)))
+       (trait ())
+       (exception ()))))
+    (instance ())
+    (class ())
+    (script (((init (method 0)) (trait ()))))))
+
+;; ulitity
+
+(define bytes-print
+  (lambda (bstr)
+    (write-string "(bytes ")
+    (for ((e bstr))
+	 (write-string "#x")
+	 (write-string (number->string e 16))
+	 (write-string " ")
+	 )
+    (write-string ")")
+))
+;(bytes-print #"\4\366\377\377\377\17\0\n\4\n\24\36\1\4\5hello\5world\rflash.display\3\5\1\26\3\3\1\1\2\1\2\3\a\2\1\a\1\2")
+
+;; The test scripts
+
+(define (run-test)
 
 ;;; s24 reader writer
 
@@ -152,20 +254,6 @@
  		 '((0 getlocal_0)))
 
 ;;; decode-id
-
-(define test-abc-data
-  '((constant_pool(
-		   (integer (-10 0 10))
-		   (uinteger (10 20 30))
-		   (double (0.1 0.2 0.3))
-		   (string ("hello" "world" "flash.display"))
-		   (namespace ((private (string 1))
-			       (package (string 3))))
-		   (ns_set ((ns_set (namespace 1))
-			    (ns_set (namespace 1) (namespace 2))))
-		   (multiname (((namespace 2) (string 1))
-			       ((namespace 1) (string 2))))
-		   ))))
 
 (check (decode-id '(integer 1) test-abc-data) => -10)
 (check (decode-id '(integer 0) test-abc-data) => 0)
@@ -337,35 +425,6 @@
   
 ;;; ABC form
 
-(define hello-world-abc
-  '(abc (minor_version 16) (major_version 46)
-    (constant_pool
-     ((integer (1 2 3))
-      (uinteger (10 20 30))
-      (double (0.1 0.2 0.3))
-      (string ("hello" "" "print" "Hello, World!!"))
-      (namespace ((package (string 2)) (private (string 2))))
-      (ns_set ((ns_set (namespace 1) (namespace 2))))
-      (multiname (((ns_set 1) (string 3)) ((namespace 1) (string 3))))))
-    (method
-     (((return_type (multiname 0)) (param_type ()) (name (string 1)) (flags 0) (options ()) (param_names ()))))
-    (metadata ())
-    (instance ())
-    (class ())
-    (script (((init (method 0)) (trait ()))))
-    (method_body
-     (((method 0)
-       (max_stack 2) (local_count 1) (init_scope_depth 0) (max_scope_depth 1)
-       (code
-	((0 getlocal 0)
-	 (2 pushscope)
-	 (3 findpropstrict (multiname 1))
-	 (5 pushstring (string 4))
-	 (7 callproperty (multiname 2) 1)
-	 (10 returnvoid)))
-       (exception ())
-       (trait ()))))))
-
 ;; (call-with-output-file "test.abc"
 ;;   (lambda (port)
 ;;     (write-abc hello-world-abc port))
@@ -374,45 +433,6 @@
 (roundtrip-check write-abc read-abc hello-world-abc)
 
 ;;; ASM form
-
-(define hello-world-asm
-  '(asm
-    (ns_set ((ns_set (package "") (private ""))))
-    (method
-     (((signature
-	((return_type *) (param_type ()) (name "hello") (flags 0) (options ()) (param_names ())))
-       (hint ((max_stack 2) (local_count 1) (init_scope_depth 0) (max_scope_depth 1)))
-       (code
-	((0 getlocal 0)
-	 (2 pushscope)
-	 (3 findpropstrict ((ns_set 1) "print"))
-	 (5 pushstring "Hello, World!!")
-	 (7 callproperty ((package "") "print") 1)
-	 (10 returnvoid)))
-       (trait ())
-       (exception ()))))
-    (instance ())
-    (class ())
-    (script (((init (method 0)) (trait ()))))))
-
-(define hello-world-asm-short
-  '(asm
-    (ns_set ((ns_set (package "") (private ""))))
-    (method
-     (((signature
-	((return_type *) (param_type ()) (name "hello") (flags 0) (options ()) (param_names ())))
-       (code
-	((0 getlocal 0)
-	 (2 pushscope)
-	 (3 findpropstrict ((ns_set 1) "print"))
-	 (5 pushstring "Hello, World!!")
-	 (7 callproperty ((package "") "print") 1)
-	 (10 returnvoid)))
-       (trait ())
-       (exception ()))))
-    (instance ())
-    (class ())
-    (script (((init (method 0)) (trait ()))))))
 
 ;;; Encode-id test
 
@@ -594,23 +614,4 @@
  (let ((bstr (to-bytes write-asm hello-world-asm-short)))
    (from-bytes read-asm bstr)) => hello-world-asm)
 
-
-;(pretty-print (from-asm hello-world-asm))
-;(pretty-print (encode-id hello-world-asm NEW-CONSTANT-DICT))
-
-
-
-;;;; ulitity
-
-(define bytes-print
-  (lambda (bstr)
-    (write-string "(bytes ")
-    (for ((e bstr))
-	 (write-string "#x")
-	 (write-string (number->string e 16))
-	 (write-string " ")
-	 )
-    (write-string ")")
-))
-
-;(bytes-print #"\4\366\377\377\377\17\0\n\4\n\24\36\1\4\5hello\5world\rflash.display\3\5\1\26\3\3\1\1\2\1\2\3\a\2\1\a\1\2")
+)
