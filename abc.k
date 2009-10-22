@@ -1295,25 +1295,27 @@
 
 ;;;;;;;;;; Driver ;;;;;;;;;;
 
-(define (asm infile is-abc)
-  (if (string? infile)
-      (let ((outfile (string-append infile ".abc")))
-	(write-file (read-file infile) outfile))
-      (usage)))
-
-(define (dump infile is-abc)
-  (if (string? infile)
-      (call-with-input-file infile
-	(if is-abc
-	    (lambda (port) (pretty-print (read-abc port)))
-	    (lambda (port) (pretty-print (read-asm port)))))
-      (usage)))
-
 (define usage
   (lambda ()
     (display "Usage: abcsx [-asm | -dump] [-abc] filename\n")
     (display "Usage: abcsx -test\n")
     (exit 1)))
+
+(define asm
+  (lambda (infile is-abc)
+    (if (string? infile)
+	(let ((outfile (string-append infile ".abc")))
+	  (write-file (read-file infile) outfile))
+	(usage))))
+
+(define dump
+  (lambda (infile is-abc)
+    (if (string? infile)
+	(call-with-input-file infile
+	  (if is-abc
+	      (lambda (port) (pretty-print (read-abc port)))
+	      (lambda (port) (pretty-print (read-asm port)))))
+	(usage))))
   
 (define run
   (lambda (args)
