@@ -115,6 +115,7 @@
   (newline))
 
 (define pretty-print pretty-print-sexp)
+(define (check-set-mode! flag) '())
 
 (load "instruction.k")
 (load "abc.k")
@@ -134,39 +135,6 @@
   (load "test.scm")
   (run-test))
 
-(define (asm infile is-abc)
-  (if (string? infile)
-      (let ((outfile (string-append infile ".abc")))
-	(write-file (read-file infile) outfile))
-      (usage)))
-
-(define (dump infile is-abc)
-  (if (string? infile)
-      (call-with-input-file infile
-	(if is-abc
-	    (lambda (port) (pretty-print (read-abc port)))
-	    (lambda (port) (pretty-print (read-asm port)))))
-      (usage)))
-
-(define usage
-  (lambda ()
-    (display "Usage: abcsx [-asm | -dump] [-abc] filename\n")
-    (display "Usage: abcsx -test\n")
-    (exit 1)))
-  
-(define main
-  (lambda (args)
-    (let ((infile '())
-	  (command asm)
-	  (is-abc #f))
-      (for-each
-       (lambda (opt)
-	 (cond
-	  ((equal? opt "-abc") (set! is-abc #t))
-	  ((equal? opt "-test") (set! command test))
-	  ((equal? opt "-asm") (set! command asm))
-	  ((equal? opt "-dump") (set! command dump))
-	  (#t (set! infile opt))))
-       (cdr args))
-      (command infile is-abc)
-      0)))
+(define (main args)
+  (run (cdr args))
+  0)
