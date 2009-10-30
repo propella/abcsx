@@ -1,5 +1,3 @@
-#!/usr/bin/env mzscheme
-
 ;; Copyright (c) 2009 Takashi Yamamiya
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -353,6 +351,16 @@
 
 (roundtrip-check write-script_info read-script_info
 		 '((init (method 0)) (trait ())))
+
+(roundtrip-check write-method_body_info read-method_body_info
+		 '((method 10)
+		   (max_stack 1) (local_count 2) (init_scope_depth 3) (max_scope_depth 4)
+		   (code ((0 returnvoid)))
+		   (exception ())
+		   (trait
+		    (((kind slot)
+		      (name (multiname 20))
+		      (slot_id 1) (type_name (multiname 0)) (vindex 0) (vkind 0) (metadata ()))))))
 
 ;;; Jump reader
 

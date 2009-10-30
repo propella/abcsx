@@ -1140,12 +1140,13 @@
 	'()
 	(let* ((method (car xs))
 	       (hint (from-asm-make-hint method))
+	       (trait (ref 'trait method '()))
 	       (code (ref 'code method)))
 	  (cons `((method ,index)
 		  ,@hint
 		  (code ,code)
 		  (exception ())
-		  (trait ()))
+		  (trait ,trait))
 		(*from-asm-method_body (cdr xs) (add1 index)))))))
 
 ;; Extract method_bodies from list of method (signature + body)

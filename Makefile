@@ -15,6 +15,7 @@ run :
 	./runasm.sh examples/callLocal.sx
 	./runasm.sh examples/call.sx
 	./runasm.sh examples/send.sx
+	./runasm.sh examples/closure.sx
 
 all : test test-dump run test-regression test-swf
 
@@ -50,4 +51,4 @@ clean :
 	asc -import ~/src/tamarin-central/core/builtin.abc -import examples/flashglobal.as $<
 
 %.sx : %.abc
-	./dump.ss $< > $@ || rm $@
+	$(DUMP) $< > $@ || rm $@
