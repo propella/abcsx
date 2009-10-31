@@ -9,12 +9,12 @@
       (add)					; scope, "Hello world"
       (callproperty ((package "") "print") 1)	; undefined
       (returnvalue))))
-   ((signature ((return_type *) (param_type ()) (name "") (flags 2) (options ()) (param_names ())))
+   ((signature ((return_type *) (param_type (*)) (name "") (flags 2) (options ()) (param_names ())))
     (code
      ((newactivation)			; scope
       (dup)				; scope, scope
       (pushscope)			; scope
-      (pushstring "Hello ")		; scope, "Hello "
+      (getlocal_1)			; scope, "Hello, "
       (setproperty ((package "") "free"))
       (newfunction (method 0))		; func
       (returnvalue)))
@@ -33,14 +33,14 @@
 
       (getglobalscope)				; global
       (findpropstrict ((package "") "hello"))	; global, global
-      (callproperty ((package "") "hello") 0)	; global, func
+      (pushstring "Hello, ")			; global, global, "Hello, "
+      (callproperty ((package "") "hello") 1)	; global, func
       (setproperty ((package "") "func"))	;
 
       (findpropstrict ((package "") "func"))	; global
-      (pushstring "world")			; global, "world"
+      (pushstring "World!")			; global, "World!"
       (callproperty ((package "") "func") 1)	; undefined
-      (returnvalue)
-      (kill 1))))))
+      (returnvalue))))))
  (script
   (((init (method 2))
     (trait ())))))

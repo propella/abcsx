@@ -4,7 +4,7 @@
   (((signature ((return_type *) (param_type ()) (name "main") (flags 0) (options ()) (param_names ())))
     (code
      ((findpropstrict ((package "") "hello"))
-      (pushstring "Hello World!")
+      (pushstring "Hello, World!")
       (callproperty ((package "") "hello") 1)
       (returnvalue))))
    ((signature ((return_type *) (param_type (*)) (name "hello") (flags 0) (options ()) (param_names ())))

@@ -1,10 +1,9 @@
-function hello() {
-    var free = "Hello ";
+function hello(free) {
     return function (arg) {
 	print(free + arg);
     }
 }
 
-var func = hello();
-func("world");
+var func = hello("Hello, ");
+func("World!");
 

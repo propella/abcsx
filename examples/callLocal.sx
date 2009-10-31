@@ -60,7 +60,7 @@
 ;    (hint ((max_stack 2) (local_count 1) (init_scope_depth 0) (max_scope_depth 0)))
     (code
      ((findpropstrict ((ns_set 1) "print"))
-      (pushstring "hello, world.")
+      (pushstring "Hello, World!")
       (callpropvoid ((package "") "print") 1)
       (returnvoid)))
     (trait ())
