@@ -74,7 +74,7 @@ abc-form : ファイル構造そのまま
 hexe の場合
 
 ~/src/haxe/haxe/genswf9.ml:645 多分ここで計算
-~/src/tamarin-central/utils/abcasm/src/abcasm/MethodBodyInfo.java これも参考になる。
+~/src/tamarin-central.711/utils/abcasm/src/abcasm/MethodBodyInfo.java これも参考になる。
 
 max_stack: stack_size : オペランドスタックサイズ push??? の数?
 local_count: nregs : ローカル変数の最大数 + 1

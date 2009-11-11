@@ -13,12 +13,12 @@
       (returnvalue))))
    ((signature ((return_type *) (param_type (*)) (name "") (flags 2) (options ()) (param_names ())))
     (code
-     ((newactivation)			; scope
-      (dup)				; scope, scope
-      (pushscope)			; scope
-      (getlocal_1)			; scope, "Hello, "
-      (setproperty ((package "") "free"))
-      (newfunction (method 0))		; func
+     ((newactivation)				; scope
+      (dup)					; scope, scope
+      (getlocal_1)				; scope, scope, "Hello, "
+      (setproperty ((package "") "free"))	; scope,
+      (pushscope)				;
+      (newfunction (method 0))			; func
       (returnvalue)))
     (trait
      (((kind slot)
