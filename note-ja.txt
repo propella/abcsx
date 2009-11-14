@@ -16,6 +16,9 @@ CallProperty   of Cpool.multiname * int: op=0x46; stack= 1-arg1; const=[entry ar
 
 http://home.earthlink.net/~krautj/sassy/sassy.html
 
+* scope
+init script での getscopeobject 0 は getlocal 0 と同じ? -> 同じ
+
 * ローカルファイル？
 
 FileReference

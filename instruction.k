@@ -67,6 +67,7 @@
     (#x46 (callproperty multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names
     (#x47 (returnvoid))
     (#x48 (returnvalue) (stack -1))
+    (#x42 (construct u30) (stack (- 0 (arg 0))))
     (#x49 (constructsuper u30) (stack (- -1 (arg 0)))) ; FIXME: Doesn't consider runtime names
     (#x4a (constructprop multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names
     (#x4c (callproplex multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names

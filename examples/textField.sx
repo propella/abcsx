@@ -6,21 +6,20 @@
 ;; ../swf_abc.erl 100 100 Hello textField.sx.abc 
 
 (asm
- (ns_set
-  ((ns_set (package "") (package "flash.text"))))
  (method
-  (((signature ((return_type *) (param_type ()) (name "")
+  (((signature ((return_type *) (param_type ()) (name "") ; method 0
 		(flags 0) (options ()) (param_names ())))
     (code
      ((returnvoid))))
-   ((signature ((return_type *) (param_type ()) (name "")
+
+   ((signature ((return_type *) (param_type ()) (name "") ; method 1
 		(flags 0) (options ()) (param_names ())))
     (code
      ((getlocal_0)
       (pushscope)
       (getlocal_0)
       (constructsuper 0)
-      (findpropstrict ((ns_set 1) "TextField"))
+      (findpropstrict ((package "flash.text") "TextField"))
       (constructprop ((package "flash.text") "TextField") 0)
       (coerce ((package "flash.text") "TextField"))
       (setlocal_1)
@@ -30,29 +29,24 @@
       (findpropstrict ((package "") "addChild"))
       (getlocal_1)
       (callproperty ((package "") "addChild") 1)
-      (pop)
-      (returnvoid))))
-   ((signature ((return_type *) (param_type ()) (name "")
+      (returnvalue))))
+
+   ((signature ((return_type *) (param_type ()) (name "") ; method 2
 		(flags 0) (options ()) (param_names ())))
     (code
-     ((getlocal_0)
-      (pushscope)
-      (getscopeobject 0)
-      (findpropstrict ((package "") "Object"))
-      (getproperty ((package "") "Object"))
-      (pushscope)
-      (findpropstrict ((package "flash.display") "Sprite"))
-      (getproperty ((package "flash.display") "Sprite"))
-      (pushscope)
-      (findpropstrict ((package "flash.display") "Sprite"))
-      (getproperty ((package "flash.display") "Sprite"))
-      (newclass 0)
-      (popscope)
-      (popscope)
-      (initproperty ((package "") "Hello"))
+     ((getlocal_0)						; this			|
+      (pushscope)						; 			| this
+      (getlocal_0)						; this, Hello, this	| this
+      (getlex ((package "flash.display") "Sprite"))		; this, Sprite		| this
+      (dup)							; this, Sprite,Sprite	| this
+      (pushscope)						; this, Sprite		| this, Sprite
+      (newclass 0)						; this, Hello		| this, Sprite
+      (popscope)						; this, Hello		| this
+;      (initproperty ((package "") "Hello"))			; 			| this
+      (setproperty ((package "") "Hello"))			; 			| this
       (returnvoid))))))
  (instance
-  (((name ((package "") "Hello"))
+  (((name ((package "") "??"))
     (super_name ((package "flash.display") "Sprite"))
     (flags 0)
     (interface ())
@@ -61,9 +55,16 @@
  (class (((cinit (method 0)) (trait ()))))
  (script
   (((init (method 2))
-    (trait
-     (((kind class)
+(trait
+
+     (((kind slot)
        (name ((package "") "Hello"))
-       (slot_id 1)
-       (classi (class 0))
-       (metadata ()))))))))
+       (slot_id 1) (type_name *) (vindex 0) (vkind 0) (metadata ())))
+)))))
+
+;;     (trait
+;;      (((kind class)
+;;        (name ((package "") "Hello"))
+;;        (slot_id 1)
+;;        (classi (class 0))
+;;        (metadata ()))))))))
