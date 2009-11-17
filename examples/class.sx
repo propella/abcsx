@@ -1,0 +1,61 @@
+;; New class definition test
+
+(asm
+ (method
+  (((signature ;; method 0 class initializer of Foo
+     ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
+    (code ((returnvoid))))
+   ((signature ;; method 1 instance initializer of Foo
+     ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
+    (code
+     ((getlocal_0)
+      (dup)
+      (pushscope)
+      (constructsuper 0)
+      (popscope)
+      (returnvoid))))
+   ((signature ;; method 2 the startup script
+     ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
+    (code
+     ((getlocal_0)			; this
+      (pushscope)			;
+
+      ;; Foo = {new subclass of Object}
+      (getscopeobject 0)		; this
+      (getlex ((ns "") "Object"))	; this, Object
+      (dup)				; this, Object, Object
+      (pushscope)			; this, Object
+      (newclass 0)			; this, (Foo)
+      (popscope)			; this, (Foo)
+      (setproperty ((ns "") "Foo"))	;
+
+      ;; foo = new Foo()
+      (getglobalscope)			; this
+      (getlex ((ns "") "Foo"))		; this, Foo
+      (construct 0)			; this, (foo)
+      (setproperty ((ns "") "foo"))	;
+
+      ;; foo.bar = "hello foo"
+      (getglobalscope)			; this
+      (getproperty ((ns "") "foo"))	; foo
+      (pushstring "Hello, World!")		; foo, "hello foo"
+      (setproperty ((ns "") "bar"))	;
+
+      ;; print(foo.bar)
+      (findpropstrict ((ns "") "print")); global
+      (getglobalscope)			; global, this
+      (getproperty ((ns "") "foo"))	; global, foo
+      (getproperty ((ns "") "bar"))	; global, "hello foo"
+      (callproperty ((ns "") "print") 1); undefined
+      (returnvalue)			;
+      )))))
+ (instance
+  (((name ((ns "") "Foo"))
+    (super_name ((ns "") "Object"))
+    (flags 0)
+    (interface ())
+    (iinit (method 1))
+    (trait
+     (((kind slot) (name ((ns "") "bar")) (slot_id 0) (type_name *) (vindex 0) (vkind 0) (metadata ())))))))
+ (class (((cinit (method 0)) (trait ()))))
+ (script (((init (method 2)) (trait ())))))

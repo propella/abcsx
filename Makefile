@@ -16,6 +16,7 @@ run :
 	./runasm.sh examples/call.sx
 	./runasm.sh examples/send.sx
 	./runasm.sh examples/closure.sx
+	./runasm.sh examples/class.sx
 
 all : test test-dump run test-regression test-swf
 
