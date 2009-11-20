@@ -1,3 +1,4 @@
+;; -*- lisp -*-
 ;; New class definition test
 
 (asm

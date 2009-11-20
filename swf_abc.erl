@@ -10,7 +10,7 @@
 main([Width, Height, SpriteClass, ABCFile]) ->
     Spec = 
 	{{frame_size, list_to_integer(Width) * 20, list_to_integer(Height) * 20},
-	 {frame_rate, 1},
+	 {frame_rate, 30},
 	 {frame_count, 1},
 	 [{file_attribute},
 	  {do_abc, ABCFile},
