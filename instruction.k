@@ -30,6 +30,7 @@
 
 (define instructions
   '(
+    (#x70 (convert_s))
     (#x08 (kill register))
     (#x09 (label))
     (#x0c (ifnlt offset) (stack -2))

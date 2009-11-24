@@ -212,6 +212,7 @@
 
 (roundtrip-check write-multiname_info read-multiname_info '((namespace 1) (string 2)))
 (roundtrip-check write-multiname_info read-multiname_info '((ns_set 3) (string 4)))
+(roundtrip-check write-multiname_info read-multiname_info '(rtqname (string 4)))
 
 ;;; Instruction
 

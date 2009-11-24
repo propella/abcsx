@@ -156,10 +156,10 @@
       ,(read-id 'string port))))
 
 (define read-multiname_kind_RTQName
-  (lambda (port) (read-id 'string port)))
+  (lambda (port) `(rtqname ,(read-id 'string port))))
 
 (define read-multiname_kind_RTQNameL
-  (lambda (port) 'RTQNameL))
+  (lambda (port) 'rtqnamel))
 
 (define read-multiname_kind_Multiname
   (lambda (port)
@@ -720,31 +720,38 @@
     (write-u8 (cdr (assoc kind CONSTANT_Namespace_write)) port)
     (write-u30 name port))))
 
-(define write-ns_set_info (lambda (x port)
-  (let ((xs (cdr x)))
-    (write-list0 (lambda (x p) (write-u30 (cadr x) p)) xs port))))
+(define write-ns_set_info
+  (lambda (x port)
+    (let ((xs (cdr x)))
+      (write-list0 (lambda (x p) (write-u30 (cadr x) p)) xs port))))
 
-(define write-multiname_kind_QName (lambda (x port)
-  (let ((kind #x07)
-	(ns (cadr (car x)))
-	(name (cadr (cadr x))))
-    (write-u8 kind port)
-    (write-u30 ns port)
-    (write-u30 name port))))
+(define write-multiname_kind_QName
+  (lambda (x port)
+    (let ((ns (cadr (car x)))
+	  (name (cadr (cadr x))))
+      (write-u8 CONSTANT_QName port)
+      (write-u30 ns port)
+      (write-u30 name port))))
 
-(define write-multiname_kind_Multiname (lambda (x port)
-  (let ((kind #x09)
-	(ns_set (cadr (car x)))
-	(name (cadr (cadr x))))
-    (write-u8 kind port)
-    (write-u30 name port)
-    (write-u30 ns_set port))))
+(define write-multiname_kind_Multiname
+  (lambda (x port)
+    (let ((ns_set (cadr (car x)))
+	  (name (cadr (cadr x))))
+      (write-u8 CONSTANT_Multiname port)
+      (write-u30 name port)
+      (write-u30 ns_set port))))
+
+(define write-multiname_kind_RTQName
+  (lambda (x port)
+    (let ((name (cadr x)))
+      (write-u8  CONSTANT_RTQName port)
+      (write-id 'string name port))))
 
 (define write-multiname_info (lambda (x port)
   (cond
    ((eq? (car x) 'attribute) (error "attribute is not supported yet"))
-   ((eq? (car x) 'RTQNameL) (error "RTQNameL is not supported yet"))
-   ((eq? (car x) 'string) (error "RTQName is not supported yet"))
+   ((eq? (car x) 'rtqnamel) (error "RTQNameL is not supported yet"))
+   ((eq? (car x) 'rtqname) (write-multiname_kind_RTQName x port))
    ((eq? (car x) 'ns_set) (error "MultinameL is not supported yet"))
    ((eq? (car (car x)) 'namespace) (write-multiname_kind_QName x port))
    ((eq? (car (car x)) 'ns_set) (write-multiname_kind_Multiname x port))
@@ -1186,13 +1193,17 @@
        (memq (car x) '(ns package internal protected explicit static private)))))
 
 ;; (multiname-id? ((namespace 1) (string 1)) => #t
-(define multiname-id? (lambda (x)
-  (and (pair? x) ; maybe unnecessary
-       (pair? (car x))
-       (eq? (length (car x)) 2)
-       (number? (cadr (car x)))
-       (or (eq? (car (car x)) 'namespace)
-	   (eq? (car (car x)) 'ns_set)))))
+(define multiname-id?
+  (lambda (x)
+    (or 
+     (eq? (car x) 'rtqname)
+     (eq? (car x) 'rtqnamel)
+     (and
+      (pair? (car x))
+      (eq? (length (car x)) 2)
+      (number? (cadr (car x)))
+      (or (eq? (car (car x)) 'namespace)
+	  (eq? (car (car x)) 'ns_set))))))
 
 ;; Encode instructions
 ;; Because encoding of argument depends on each instruction, I need a
