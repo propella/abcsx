@@ -49,14 +49,13 @@
       (pushbyte 7)
       (ifgt L1)
       (findpropstrict ((package "") "print"))
-      (pushstring "then")
+      (pushstring "** Something bad!! **")
       (callproperty ((package "") "print") 1)
       (jump L2)
       L1
       (findpropstrict ((package "") "print"))
-      (pushstring "else")
+      (pushstring "Hello, World!")
       (callproperty ((package "") "print") 1)
       L2
-      (returnvoid)))
-    )))
+      (returnvoid))))))
  (script (((init (method 0)) (trait ())))))

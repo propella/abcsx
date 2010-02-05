@@ -14,7 +14,7 @@
 	(construct 0)				; global []
 	(dup)					; global [] []
 	(pushbyte 10)				; global [] [] 10
-	(pushstring "Hello, World!!")		; global [] [] 10 "Hello, World!"
+	(pushstring "Hello, World!")		; global [] [] 10 "Hello, World!"
 	(setproperty (multinamel (ns_set 1)))	; global [10: "Hello, World"]
 	(pushbyte 10)				; global [10: "Hello, World"] 10
 	(getproperty (multinamel (ns_set 1)))	; global "Hello, World!"

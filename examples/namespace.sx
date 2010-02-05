@@ -26,7 +26,7 @@
       (23 getproperty ((ns_set 1) "ns"))
       (25 coerce ((package "") "Namespace"))
       (27 getproperty (rtqname "System"))
-      (29 pushstring "Hello World!\n")
+      (29 pushstring "Hello, World!\n")
       (31 callproperty ((ns_set 1) "write") 1)
       (34 coerce_a)
       (35 setlocal_1)
