@@ -213,6 +213,7 @@
 (roundtrip-check write-multiname_info read-multiname_info '((namespace 1) (string 2)))
 (roundtrip-check write-multiname_info read-multiname_info '((ns_set 3) (string 4)))
 (roundtrip-check write-multiname_info read-multiname_info '(rtqname (string 4)))
+(roundtrip-check write-multiname_info read-multiname_info '(multinamel (ns_set 1)))
 
 ;;; Instruction
 
@@ -441,7 +442,12 @@
 
 (roundtrip-check write-abc read-abc hello-world-abc)
 
-;;; ASM form
+(check (multiname-id? '(package "")) => #f)
+(check (multiname-id? '((namespace 1) (string 1))) => #t)
+(check (multiname-id? '((ns_set 1) (string 1))) => #t)
+(check (multiname-id? '(multinamel (ns_set 1))) => #t)
+(check (multiname-id? '(rtqname)) => #t)
+(check (multiname-id? '(rtqnamel)) => #t)
 
 ;;; Encode-id test
 

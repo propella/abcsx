@@ -168,7 +168,7 @@
       `(,ns_set ,name)))) ;; Note: the order is swapped.
 
 (define read-multiname_kind_MultinameL
-  (lambda (port) (read-id 'ns_set port)))
+  (lambda (port) `(multinamel ,(read-id 'ns_set port))))
 
 (define transpose
   (lambda (dict)  (map (lambda (pair) (cons (cdr pair) (car pair))) dict)))
@@ -747,12 +747,19 @@
       (write-u8  CONSTANT_RTQName port)
       (write-id 'string name port))))
 
+(define write-multiname_kind_MultinameL
+  (lambda (x port)
+    (let ((ns_set (cadr x)))
+      (write-u8 CONSTANT_MultinameL port)
+      (write-id 'ns_set ns_set port))))
+
 (define write-multiname_info (lambda (x port)
   (cond
    ((eq? (car x) 'attribute) (error "attribute is not supported yet"))
    ((eq? (car x) 'rtqnamel) (error "RTQNameL is not supported yet"))
    ((eq? (car x) 'rtqname) (write-multiname_kind_RTQName x port))
    ((eq? (car x) 'ns_set) (error "MultinameL is not supported yet"))
+   ((eq? (car x) 'multinamel) (write-multiname_kind_MultinameL x port))
    ((eq? (car (car x)) 'namespace) (write-multiname_kind_QName x port))
    ((eq? (car (car x)) 'ns_set) (write-multiname_kind_Multiname x port))
    )))
@@ -1188,9 +1195,8 @@
 	  (cont (list type id) *dict))))))
 
 ;; (namespace-id? (package "")) => #t
-(define namespace-id? (lambda (x)
-  (and (pair? x) ; maybe unnecessary
-       (memq (car x) '(ns package internal protected explicit static private)))))
+(define namespace-id?
+  (lambda (x) (memq (car x) '(ns package internal protected explicit static private))))
 
 ;; (multiname-id? ((namespace 1) (string 1)) => #t
 (define multiname-id?
@@ -1198,6 +1204,7 @@
     (or 
      (eq? (car x) 'rtqname)
      (eq? (car x) 'rtqnamel)
+     (eq? (car x) 'multinamel)
      (and
       (pair? (car x))
       (eq? (length (car x)) 2)
