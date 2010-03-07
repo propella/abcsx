@@ -52,8 +52,8 @@
   (lambda (proc)
     (string->u8vector (call-with-output-string proc))))
 
-(define string->bytes/utf-8 string->u8vector)
-(define bytes->string/utf-8 u8vector->string)
+(define bytes->string u8vector->string)
+(define string->bytes string->u8vector)
 
 (define bytes-length u8vector-length)
 

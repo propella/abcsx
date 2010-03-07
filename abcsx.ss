@@ -24,6 +24,9 @@
 (require srfi/78) ; Lightweight testing
 (require srfi/1) ; List library
 
+(define bytes->string bytes->string/utf-8)
+(define string->bytes string->bytes/utf-8)
+
 ;;; Read a file
 (define (read-file infile)
   (call-with-input-file infile

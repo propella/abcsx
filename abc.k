@@ -68,8 +68,8 @@
     (let ((b0 (read-byte port))
 	  (b1 (read-byte port))
 	  (b2 (read-byte port)))
-      (if (positive? (bitwise-and b2 #b10000000))
-	  (+ (* b2 #x10000) (* b1 #x100) b0 #x-1000000)
+      (if (positive? (bitwise-and b2 #x80))
+	  (+ (* b2 #x10000) (* b1 #x100) b0 (- 0 #x1000000))
 	  (+ (* b2 #x10000) (* b1 #x100) b0)))))
 
 (define read-s32
@@ -110,7 +110,7 @@
 (define read-string_info
   (lambda (port)
     (let ((size (read-u30 port)))
-      (bytes->string/utf-8 (read-bytes size port)))))
+      (bytes->string (read-bytes size port)))))
 
 ;;; namespace_info reader
 
@@ -307,10 +307,10 @@
 (define read-traits_info (lambda (port)
   (let* ((name (read-id 'multiname port))
 	 (kind (read-u8 port))
-	 (trait-type (bitwise-and kind #b1111))
-	 (is-ATTR_Final    (positive? (bitwise-and kind #b00010000)))
-	 (is-ATTR_Override (positive? (bitwise-and kind #b00100000)))
-	 (is-ATTR_Metadata (positive? (bitwise-and kind #b01000000)))
+	 (trait-type (bitwise-and kind #x0f))
+	 (is-ATTR_Final    (positive? (bitwise-and kind #x10)))
+	 (is-ATTR_Override (positive? (bitwise-and kind #x20)))
+	 (is-ATTR_Metadata (positive? (bitwise-and kind #x40)))
 	 (data (read-traits_info_data name trait-type port))
 	 (typename (car data))
 	 (others (cdr data))
@@ -710,7 +710,7 @@
 ;;; cpool_info writer
 
 (define write-string_info (lambda (x port)
-  (let ((bytes (string->bytes/utf-8 x)))
+  (let ((bytes (string->bytes x)))
     (write-u30 (bytes-length bytes) port)
     (write-bytes bytes port))))
 
@@ -840,7 +840,7 @@
 	  )
       (write-id 'multiname (ref 'name x) port)
       (write-u8 (if has-metadata
-		    (bitwise-ior Trait_Class #b01000000) ; ATTR_Metadata
+		    (bitwise-ior Trait_Class #x40) ; ATTR_Metadata
 		    Trait_Class)
 		port)
       (write-u30 slot_id port)
