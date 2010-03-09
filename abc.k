@@ -29,6 +29,10 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
+;; Caution: It is expected that map and build-list executes inner loop
+;; in order of the list. Neither documents of map and build-list don't
+;; assure the behavior.
+
 ;;;;;;;;;; ABC Form Reader ;;;;;;;;;;
 
 ;;;; Primitive Data Types Reader
@@ -53,13 +57,13 @@
 	    (if (< b 128) (+ (arithmetic-shift b 7) a)
 		(let ((b (bitwise-and b #x7f))
 		      (c  (read-byte port)))
-		  (if (< c 128) (+ (arithmetic-shift c 14) (arithmetic-shift b 7) a)
+		  (if (< c 128) (+ (+ (arithmetic-shift c 14) (arithmetic-shift b 7)) a)
 		      (let ((c (bitwise-and c #x7f))
 			    (d  (read-byte port)))
-			(if (< d 128) (+ (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a)
+			(if (< d 128) (+ (+ (+ (arithmetic-shift d 21) (arithmetic-shift c 14)) (arithmetic-shift b 7)) a)
 			    (let ((d (bitwise-and d #x7f))
 				  (e  (bitwise-and (read-byte port) #x0f)))
-			      (+ (arithmetic-shift e 28) (arithmetic-shift d 21) (arithmetic-shift c 14) (arithmetic-shift b 7) a))))))))))))
+			      (+ (+ (+ (+ (arithmetic-shift e 28) (arithmetic-shift d 21)) (arithmetic-shift c 14)) (arithmetic-shift b 7)) a))))))))))))
 
 (define read-u30 read-u32)
 
@@ -69,8 +73,8 @@
 	  (b1 (read-byte port))
 	  (b2 (read-byte port)))
       (if (positive? (bitwise-and b2 #x80))
-	  (+ (* b2 #x10000) (* b1 #x100) b0 (- 0 #x1000000))
-	  (+ (* b2 #x10000) (* b1 #x100) b0)))))
+	  (+ (+ (+ (* b2 #x10000) (* b1 #x100)) b0) (- 0 #x1000000))
+	  (+ (+ (* b2 #x10000) (* b1 #x100)) b0)))))
 
 (define read-s32
   (lambda (port)
@@ -152,8 +156,9 @@
 
 (define read-multiname_kind_QName
   (lambda (port)
-    `(,(read-id 'namespace port)
-      ,(read-id 'string port))))
+    (let ((namespace (read-id 'namespace port))
+	  (string  (read-id 'string port)))
+      `(,namespace ,string))))
 
 (define read-multiname_kind_RTQName
   (lambda (port) `(rtqname ,(read-id 'string port))))
@@ -248,13 +253,15 @@
 
 (define read-item_info
   (lambda (port)
-    `((key ,(read-id 'string port))
-      (value ,(read-id 'string port)))))
+    (let ((key (read-id 'string port))
+	  (value (read-id 'string port)))
+    `((key ,key) (value ,value)))))
 
 (define read-metadata_info
   (lambda (port)
-    `((name ,(read-id 'string port))
-      (items ,(read-list0 read-item_info port)))))
+    (let ((name (read-id 'string port))
+	  (items (read-list0 read-item_info port)))
+    `((name ,name) (items ,items)))))
 
 ;;; traits_info reader
 
@@ -279,28 +286,31 @@
 
 (define read-trait_class
   (lambda (port)
-    `((slot_id ,(read-u30 port))
-      (classi ,(read-id 'class port)))))
+    (let ((slot_id (read-u30 port))
+	  (classi (read-id 'class port)))
+    `((slot_id ,slot_id) (classi ,classi)))))
 
 (define read-trait_function
   (lambda (port)
-    `((slot_id ,(read-u30 port))
-      (function ,(read-u30 port)))))
+    (let ((slot_id (read-u30 port))
+	  (function (read-u30 port)))
+    `((slot_id ,slot_id) (function ,function)))))
 
 (define read-trait_method
   (lambda (port)
-    `((disp_id ,(read-u30 port))
-      ,(read-id 'method port))))
+    (let ((disp_id (read-u30 port))
+	  (method (read-id 'method port)))
+    `((disp_id ,disp_id) ,method))))
   
 (define read-traits_info_data (lambda (name kind port)
   (cond
-   ((= kind Trait_Slot) `(slot . ,(read-trait_slot port)))
-   ((= kind Trait_Method) `(method . ,(read-trait_method port)))
-   ((= kind Trait_Getter) `(getter . ,(read-trait_method port)))
-   ((= kind Trait_Setter) `(setter . ,(read-trait_method port)))
-   ((= kind Trait_Class) `(class . ,(read-trait_class port)))
-   ((= kind Trait_Function) `(function . ,(read-trait_function port)))
-   ((= kind Trait_Const) `(const ,(read-trait_slot port)))
+   ((= kind Trait_Slot) (cons 'slot (read-trait_slot port)))
+   ((= kind Trait_Method) (cons 'method (read-trait_method port)))
+   ((= kind Trait_Getter) (cons 'getter (read-trait_method port)))
+   ((= kind Trait_Setter) (cons 'setter (read-trait_method port)))
+   ((= kind Trait_Class) (cons 'class (read-trait_class port)))
+   ((= kind Trait_Function) (cons 'function (read-trait_function port)))
+   ((= kind Trait_Const) (cons 'const (read-trait_slot port)))
    (else (error (format "Unknown trait type ~a" kind)))
 )))
 

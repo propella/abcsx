@@ -21,20 +21,21 @@
 ;;; Test utilities
 
 ;; proc is (proc port)
-(define (from-bytes proc bstr)
-  (proc (open-input-bytes bstr)))
+(define from-bytes
+  (lambda (proc bstr) (proc (open-input-bytes bstr))))
 
 ;; proc is (proc obj port)
-(define (to-bytes proc obj)
-  (call-with-output-bytes (lambda (port) (proc obj port))))
+(define to-bytes
+  (lambda (proc obj) (call-with-output-bytes (lambda (port) (proc obj port)))))
 
 ;; round trip
 ;; write-proc is (write-proc obj port)
 ;; read-proc is (read-proc port)
-(define (roundtrip-check write-proc read-proc obj)
-  (check
-   (let ((bstr (to-bytes write-proc obj)))
-     (from-bytes read-proc bstr)) => obj))
+(define roundtrip-check
+  (lambda (write-proc read-proc obj)
+    (check
+     (let ((bstr (to-bytes write-proc obj)))
+       (from-bytes read-proc bstr)) => obj)))
 
 ;; test data
 
@@ -122,21 +123,21 @@
 
 ;; ulitity
 
-(define bytes-print
-  (lambda (bstr)
-    (write-string "(bytes ")
-    (for ((e bstr))
-	 (write-string "#x")
-	 (write-string (number->string e 16))
-	 (write-string " ")
-	 )
-    (write-string ")")
-))
-;(bytes-print #"\4\366\377\377\377\17\0\n\4\n\24\36\1\4\5hello\5world\rflash.display\3\5\1\26\3\3\1\1\2\1\2\3\a\2\1\a\1\2")
+;; (define bytes-print
+;;   (lambda (bstr)
+;;     (write-string "(bytes ")
+;;     (for ((e bstr))
+;; 	 (write-string "#x")
+;; 	 (write-string (number->string e 16))
+;; 	 (write-string " ")
+;; 	 )
+;;     (write-string ")")
+;; ))
+;; (bytes-print #"\4\366\377\377\377\17\0\n\4\n\24\36\1\4\5hello\5world\rflash.display\3\5\1\26\3\3\1\1\2\1\2\3\a\2\1\a\1\2")
 
 ;; The test scripts
 
-(define (run-test)
+(define run-test (lambda ()
 
 ;;; s24 reader writer
 
@@ -154,12 +155,12 @@
 
 (check (from-bytes read-s32 (bytes #x02)) => 2)
 (check (from-bytes read-s32 (bytes #xfe #xff #xff #xff #x0f)) => -2)
-(check (from-bytes read-s32 (bytes #x80 #x80 #x80 #x80 #x08)) => #x-80000000)
+(check (from-bytes read-s32 (bytes #x80 #x80 #x80 #x80 #x08)) => (- 0 #x80000000))
 (check (from-bytes read-s32 (bytes #xff #xff #xff #xff #x07)) => #x7fffffff)
 
 (check (to-bytes write-s32 2) => (bytes #x02))
 (check (to-bytes write-s32 -2) => (bytes #xfe #xff #xff #xff #x0F))
-(check (to-bytes write-s32 #x-80000000) => (bytes #x80 #x80 #x80 #x80 #x08))
+(check (to-bytes write-s32 (- 0 #x80000000)) => (bytes #x80 #x80 #x80 #x80 #x08))
 (check (to-bytes write-s32 #x7fffffff) => (bytes #xff #xff #xff #xff #x07))
 
 
@@ -629,4 +630,4 @@
  (let ((bstr (to-bytes write-asm hello-world-asm-short)))
    (from-bytes read-asm bstr)) => hello-world-asm)
 
-)
+))
