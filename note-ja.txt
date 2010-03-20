@@ -7,9 +7,17 @@ todo: パラメータ一つの時 (key value) 複数の時 (key value value ..) 
 todo: 関数定義引き数付き
 todo: signature で (name *) が指定出来ない。
 
-Happy ABC で疑問の所
+* bugs
+
+** Happy ABC で疑問の所
 stack= -arg1?
 CallProperty   of Cpool.multiname * int: op=0x46; stack= 1-arg1; const=[entry arg0]; args=fun ctx ->[cindex arg0 ctx; u30 arg1]
+
+** avm2overview.pdf
+
+greaterthan と greaterequals の formats が両方 0xaf
+
+* sassy
 
 ;;(require srfi/28) ;; format
 ;;(require srfi/60) ;; bitwise
