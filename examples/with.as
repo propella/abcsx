@@ -1,5 +1,5 @@
-var obj = { 'v' : "Hello, World" }
+obj = { 'v' : "Hello, World" }
 
 with (obj) {
-    print(v)
+    (function () { print (v) })()
 }
