@@ -19,6 +19,7 @@ run :
 	./runasm.sh examples/class.sx
 	./runasm.sh examples/namespace.sx
 	./runasm.sh examples/array.sx
+	./runasm.sh examples/with.sx
 	./runasm.sh examples/activation.sx
 
 all : test test-dump run test-regression test-swf
