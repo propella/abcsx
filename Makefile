@@ -7,7 +7,7 @@ ASM=./abcsx.ss -asm
 REGRESSION = examples/textField
 
 # asm test
-run : 
+run :
 	./runasm.sh examples/hello.sx
 	./runasm.sh examples/parseInt.sx
 	./runasm.sh examples/arithmetic.sx
@@ -22,7 +22,10 @@ run :
 	./runasm.sh examples/with.sx
 #	./runasm.sh examples/activation.sx -- works only before tamarin 711
 
-all : test test-dump run test-regression test-swf
+partial : examples/partial1.sx.abc examples/partial2.sx.abc
+	avmshell examples/partial1.sx.abc examples/partial2.sx.abc
+
+all : test test-dump run partial test-regression test-swf
 
 # unit test
 test :
@@ -55,5 +58,6 @@ clean :
 #	asc $<
 	asc -import ~/src/tamarin-central/core/builtin.abc -import examples/flashglobal.as $<
 
-%.sx : %.abc
-	$(DUMP) $< > $@ || rm $@
+%.sx.abc : %.sx
+	$(ASM) $<
+
