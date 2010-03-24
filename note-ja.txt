@@ -1,5 +1,6 @@
 scheme による abc アセンブラ -*- outline -*-
 
+todo: write Trait_Function, Trait_Const
 todo: 起動コマンド統一
 todo: gauche dump
 todo: scheme 48 対応

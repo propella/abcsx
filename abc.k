@@ -824,50 +824,54 @@
 
 ;;; traits_info writer
 
-(define write-trait_slot
-  (lambda (x port)
-    (let ((slot_id (ref 'slot_id x))
-	  (type_name (ref 'type_name x))
-	  (vindex (if (= (ref 'vindex x) 0)
-		      0
-		      (error "vindex is not supported yet")))
-	  (metadata_count (if (null? (ref 'metadata x))
-			      0
-			      (error "metadata is not supported et"))))
-      (write-id 'multiname (ref 'name x) port)
-      (write-u8 Trait_Slot port)
-      (write-u30 slot_id port)
-      (write-id 'multiname type_name port)
-      (write-u30 0 port) ; vindex
-      ; metadata omitted (ATTR_Metadata)
-      )))
-
-(define write-trait_class ;; todo: slot_id and metadata can be converged with other slots.
-  (lambda (x port)
-    (let ((slot_id (ref 'slot_id x))
-	  (classi (ref 'classi x))
-	  (has-metadata (> (length (ref 'metadata x)) 0))
-	  )
-      (write-id 'multiname (ref 'name x) port)
-      (write-u8 (if has-metadata
-		    (bitwise-ior Trait_Class #x40) ; ATTR_Metadata
-		    Trait_Class)
-		port)
-      (write-u30 slot_id port)
-      (write-id 'class classi port)
+(define *write-traits_info
+  (lambda (func kind x port)
+    (let* ((name (ref 'name x))
+           (has-metadata (> (length (ref 'metadata x)) 0))
+           (kind* (if has-metadata
+                      (bitwise-ior kind #x40) ; ATTR_Metadata
+                      kind)))
+      (write-id 'multiname name port)
+      (write-u8 kind* port)
+      (func x port)
       (if has-metadata
 	  (write-list0 write-metadata_info (ref 'metadata x) port)
 	  '()))))
+
+(define write-trait_slot
+  (lambda (x port)
+    (let ((slot_id (ref 'slot_id x))
+          (type_name (ref 'type_name x))
+          (vindex (if (= (ref 'vindex x) 0)
+                      0
+                      (error "vindex is not supported yet"))))
+      (write-u30 slot_id port)
+      (write-id 'multiname type_name port)
+      (write-u30 vindex port))))
+
+(define write-trait_class
+  (lambda (x port)
+    (let ((slot_id (ref 'slot_id x))
+          (classi (ref 'classi x)))
+      (write-u30 slot_id port)
+      (write-id 'class classi port))))
+
+(define write-trait_method
+  (lambda (x port)
+    (let ((disp_id (ref 'disp_id x))
+          (method (ref 'method x)))
+      (write-u30 disp_id port)
+      (write-u30 method port))))
 
 (define write-traits_info
   (lambda (x port)
     (let ((kind (cadr (assoc 'kind x))))
       (cond
-       ((eq? kind 'slot) (write-trait_slot x port))
-       ((eq? kind 'method) (error "method trait is not supported yet"))
-       ((eq? kind 'getter) (error "getter trait is not supported yet"))
-       ((eq? kind 'setter) (error "setter trait is not supported yet"))
-       ((eq? kind 'class) (write-trait_class x port))
+       ((eq? kind 'slot) (*write-traits_info write-trait_slot Trait_Slot x port))
+       ((eq? kind 'method) (*write-traits_info write-trait_method Trait_Method x port))
+       ((eq? kind 'getter) (*write-traits_info write-trait_slot Trait_Getter x port))
+       ((eq? kind 'setter) (*write-traits_info write-trait_slot Trait_Setter x port))
+       ((eq? kind 'class) (*write-traits_info write-trait_class Trait_Class x port))
        ((eq? kind 'function) (error "function trait is not supported yet"))
        ((eq? kind 'const) (error "const trait is not supported yet"))
        (else (error (format "Unknown trait type ~a" kind)))))))

@@ -340,6 +340,15 @@
 			      ((name (string 6)) (items (((key (string 7)) (value (string 8))))))
 			      ))))
 
+
+
+(roundtrip-check write-traits_info read-traits_info
+                 '((kind method)
+                   (name (multiname 7))
+                   (disp_id 20)
+                   (method 0)
+                   (metadata ())))
+
 (roundtrip-check write-instance_info read-instance_info
 		 '((name (multiname 3))
 		   (super_name (multiname 5))
