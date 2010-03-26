@@ -76,7 +76,7 @@
     (#x4c (callproplex multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names
     (#x4f (callpropvoid multiname u30) (stack (- 1 (arg 1))))
     (#x55 (newobject u30) (stack (- (+ (arg 0) (arg 0)) 1)))
-    (#x56 (newarray u30) (stack (- 1 (arg 1))))
+    (#x56 (newarray u30) (stack (- 1 (arg 0))))
     (#x57 (newactivation) (stack 1))
     (#x58 (newclass u30)) ; todo ClassInfo
     (#x5a (newcatch u30) (stack 1)) ; todo exception info
