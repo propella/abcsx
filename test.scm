@@ -37,6 +37,12 @@
      (let ((bstr (to-bytes write-proc obj)))
        (from-bytes read-proc bstr)) => obj)))
 
+;; Utility function to test encode-id
+(define apply-encode-id
+  (lambda (target cont)
+    (let ((result (target)))
+      (apply cont (list (car result) (cdr result))))))
+
 ;; test data
 
 (define test-abc-data
@@ -461,76 +467,114 @@
 
 ;;; Encode-id test
 
-(encode-id-add 'string "first word" NEW-CONSTANT-DICT
-  (lambda (x dict)
-    (check x => '(string 1))
-    (encode-id-add 'string "first word" dict
-      (lambda (x dict)
-	(check x => '(string 1))
-	(encode-id-add 'string "second word" dict
-	  (lambda (x dict)
-	    (check x => '(string 2))))))))
+(let ((r (encode-id-add 'string "first word" NEW-CONSTANT-DICT)))
+  (check (car r) => '(string 1))
+  (check (assoc 'string (cdr r)) => '(string "first word")))
+
+(apply-encode-id
+ (lambda () (encode-id-add 'string "first word" NEW-CONSTANT-DICT))
+ (lambda (x dict)
+   (check x => '(string 1))
+   (check (assoc 'string dict) => '(string "first word"))
+   (apply-encode-id
+    (lambda () (encode-id-add 'string "first word" dict))
+    (lambda (x dict)
+      (check x => '(string 1))
+      (apply-encode-id
+       (lambda () (encode-id-add 'string "second word" dict))
+       (lambda (x dict)
+         (check x => '(string 2))))))))
 
 ;;; string
 
-(check (encode-id "hello" NEW-CONSTANT-DICT (lambda (x dict) x))  => '(string 1))
+(check (encode-id "hello" NEW-CONSTANT-DICT)
+       => '((string 1) (string "hello") (integer) (uinteger) (double) (namespace) (multiname)))
 
-(encode-id "hello" NEW-CONSTANT-DICT
-  (lambda (x dict) (encode-id "hello" dict
-    (lambda (x dict2) (encode-id "world" dict2
-      (lambda (x dict3)
-	(check x => '(string 2))
-	(check dict3 => '((string "world" "hello")
-			  (integer) (uinteger) (double) (namespace) (multiname))
-	       )))))))
+(apply-encode-id
+ (lambda () (encode-id-typed-add '(integer . 7) NEW-CONSTANT-DICT))
+ (lambda (x dict)
+   (check x => '(integer 1))
+   (check (assoc 'integer dict) => '(integer 7))))
+
+(apply-encode-id
+ (lambda () (encode-id-map encode-id-typed-add
+                            '((integer . 7)
+                              (double . 3.14)
+                              (integer . 7)
+                              (integer . 42))
+                            NEW-CONSTANT-DICT))
+ (lambda (x dict)
+   (check x => '((integer 1) (double 1) (integer 1) (integer 2)))
+   (check (assoc 'integer dict) => '(integer 42 7))
+   (check (assoc 'double dict) => '(double 3.14))))
+
+(apply-encode-id
+ (lambda () (encode-id-code '(code ((pushint 7)
+                                     (pushdouble 3.14)
+                                     (pushint 7)
+                                     (pushint 42)
+                                     (pushuint 7)))
+                             NEW-CONSTANT-DICT))
+  (lambda (x dict)
+    (check x => '(code ((pushint (integer 1))
+                        (pushdouble (double 1))
+                        (pushint (integer 1))
+                        (pushint (integer 2))
+                        (pushuint (uinteger 1)))))
+    (check (assoc 'integer dict) => '(integer 42 7))
+    (check (assoc 'uinteger dict) => '(uinteger 7))
+    (check (assoc 'double dict) => '(double 3.14))))
 
 ;;; list
-(check (encode-id-map encode-id '("hello" "world") NEW-CONSTANT-DICT (lambda (x dict) x))
+(check (car (encode-id-map encode-id '("hello" "world") NEW-CONSTANT-DICT))
        => '((string 1) (string 2)))
 
 ;;; namespace
 
-(check (encode-id '(package "ok") NEW-CONSTANT-DICT (lambda (x dict) x))  => '(namespace 1))
+(check (car (encode-id '(package "ok") NEW-CONSTANT-DICT))  => '(namespace 1))
 
-(encode-id '(package "ok") NEW-CONSTANT-DICT
-  (lambda (x dict) 
-    (check x => '(namespace 1))
-    (check dict => '((namespace (package (string 1)))
-		     (string "ok")
-		     (integer) (uinteger) (double) (multiname)))))
+(apply-encode-id
+ (lambda () (encode-id '(package "ok") NEW-CONSTANT-DICT))
+ (lambda (x dict) 
+   (check x => '(namespace 1))
+   (check dict => '((namespace (package (string 1)))
+                    (string "ok")
+                    (integer) (uinteger) (double) (multiname)))))
 
-(encode-id '((package "") "print") NEW-CONSTANT-DICT
-  (lambda (x dict) 
-    (check x => '(multiname 1))
-    (check dict => '((multiname ((namespace 1) (string 2)))
-		     (string "print" "")
-		     (namespace (package (string 1)))
-		     (integer) (uinteger) (double)))))
+(apply-encode-id
+ (lambda () (encode-id '((package "") "print") NEW-CONSTANT-DICT))
+ (lambda (x dict) 
+   (check x => '(multiname 1))
+   (check dict => '((multiname ((namespace 1) (string 2)))
+                    (string "print" "")
+                    (namespace (package (string 1)))
+                    (integer) (uinteger) (double)))))
 
-(encode-id '((ns_set 1) "print") NEW-CONSTANT-DICT
-  (lambda (x dict) 
-    (check x => '(multiname 1))
-    (check dict => '((multiname ((ns_set 1) (string 1)))
+(apply-encode-id
+ (lambda () (encode-id '((ns_set 1) "print") NEW-CONSTANT-DICT))
+ (lambda (x dict) 
+   (check x => '(multiname 1))
+   (check dict => '((multiname ((ns_set 1) (string 1)))
 		     (string "print")
 		     (integer) (uinteger) (double) (namespace)))))
 
 ;;; signature
 
 (check 
- (encode-id '((return_type *) (param_type ()) (name "hello") (flags 0) (options ()) (param_names ())) NEW-CONSTANT-DICT
-	     (lambda (x dict) x))
+ (car (encode-id '((return_type *) (param_type ()) (name "hello") (flags 0) (options ()) (param_names ())) NEW-CONSTANT-DICT))
  => '((return_type (multiname 0)) (param_type ()) (name (string 1)) (flags 0) (options ()) (param_names ())))
   
 ;;; code without numbers
 
-(encode-id
- '(code ((getlocal 0)
-	 (_ pushscope)
-	 (3 findpropstrict ((ns_set 1) "print"))
-	 (5 pushstring "Hello, World!!")
-	 (7 callproperty ((package "") "print") 1)
-	 (10 returnvoid)))
- NEW-CONSTANT-DICT
+(apply-encode-id
+ (lambda () (encode-id
+  '(code ((getlocal 0)
+          (_ pushscope)
+          (3 findpropstrict ((ns_set 1) "print"))
+          (5 pushstring "Hello, World!!")
+          (7 callproperty ((package "") "print") 1)
+          (10 returnvoid)))
+  NEW-CONSTANT-DICT))
  (lambda (x dict)
    (check x => '(code ((getlocal 0)
 		       (pushscope)
@@ -548,36 +592,37 @@
 ;;; no-conversion
 
 (check 
- (encode-id '((0 getlocal 0) (2 pushscope)) NEW-CONSTANT-DICT
-	     (lambda (x dict) x))
+ (car (encode-id '((0 getlocal 0) (2 pushscope)) NEW-CONSTANT-DICT))
  => '((0 getlocal 0) (2 pushscope)))
 
 ;;; ns_set
 
-(encode-id '(ns_set (package "ok") (private "ok")) NEW-CONSTANT-DICT
-	    (lambda (x dict)
-	      (check x => '(ns_set (namespace 1) (namespace 2)))
-	      (check dict => '((namespace (private (string 1)) (package (string 1)))
-			       (string "ok") (integer) (uinteger) (double) (multiname)))))
+(apply-encode-id
+ (lambda () (encode-id '(ns_set (package "ok") (private "ok")) NEW-CONSTANT-DICT))
+ (lambda (x dict)
+   (check x => '(ns_set (namespace 1) (namespace 2)))
+   (check dict => '((namespace (private (string 1)) (package (string 1)))
+                    (string "ok") (integer) (uinteger) (double) (multiname)))))
 
 ;;; code with constant numbers
 
-(encode-id '(code (
+(apply-encode-id
+ (lambda () (encode-id '(code (
 		   (pushstring "byte 9 + short 938=")
 		   (_ pushbyte 9)
 		   (9 pushshort 938)
 		   (21 pushint 3652147)
 		   (23 pushuint 2147483648)
 		   (34 pushdouble 9.391)
-		   )) NEW-CONSTANT-DICT
-		      (lambda (x dict) (check x => '(code (
-							   (pushstring (string 1))
-							   (pushbyte 9)
-							   (pushshort 938)
-							   (pushint (integer 1))
-							   (pushuint (uinteger 1))
-							   (pushdouble (double 1))
-							   )))))
+		   )) NEW-CONSTANT-DICT))
+ (lambda (x dict) (check x => '(code (
+                                      (pushstring (string 1))
+                                      (pushbyte 9)
+                                      (pushshort 938)
+                                      (pushint (integer 1))
+                                      (pushuint (uinteger 1))
+                                      (pushdouble (double 1))
+                                      )))))
 
 ;;; From ASM
 
@@ -587,7 +632,7 @@
 (check 
  (let* ((ns_set '(((package "") (private ""))))
 	(method (ref 'method (cdr hello-world-asm)))
-	(dict (encode-id method NEW-CONSTANT-DICT (lambda (x dict) dict)))
+	(dict (cdr (encode-id method NEW-CONSTANT-DICT)))
 	(constant (from-asm-constant dict ns_set)))
    constant)
  => '((integer ())

@@ -1184,29 +1184,43 @@
 
 ;;; encode-id
 
-;; Map the CPS function on the list
-(define encode-id-map (lambda (proc xs dict cont)
-  (if (null? xs)
-      (cont xs dict)
-      (proc (car xs) dict
-        (lambda (x dict)
-	  (encode-id-map proc (cdr xs) dict
-            (lambda (xs dict) (cont (cons x xs) dict))))))))
+;; Map a encode function on the list
+
+(define encode-id-map
+  (lambda (proc xs dict)
+    (if (null? xs)
+        (cons xs dict)
+        (let* ((result (proc (car xs) dict))
+               (rest (encode-id-map proc (cdr xs) (cdr result))))
+          (cons (cons (car result) (car rest)) (cdr rest))))))
+
+(define _encode-id-map
+  (lambda (proc xs dict)
+    (let ((pair
+           (fold (lambda (x *pair) ;; switch to (*pair e) if fold-left.
+                   (let ((dict (cdr *pair))
+                         (rest (car *pair)))
+                     (let ((result (proc x dict)))
+                       (cons (cons (car result) rest) (cdr result)))))
+                 (cons '() dict)
+                 xs)))
+      (cons (reverse (car pair)) (cdr pair)))))
 
 ;; Make a index depending on the first element.
 ;; (package "") => (namespace 1)
 ;; ((package "") "hello") => (multiname 1)
 
 ;; Register a value into the dictionary
-(define encode-id-add (lambda (type x dict cont)
-  (let* ((pool (assoc type dict))
-	 (found (member x (cdr pool))))
-    (if found
-	(cont (list type (length found)) dict)
-	(let* ((*pool (cons type  (cons x (cdr pool))))
-	       (*dict (cons *pool (delete pool dict)))
-	       (id (length (cdr *pool))))
-	  (cont (list type id) *dict))))))
+(define encode-id-add
+  (lambda (type x dict)
+    (let* ((pool (assoc type dict))
+           (found (member x (cdr pool))))
+      (if found
+          (cons (list type (length found)) dict)
+          (let* ((*pool (cons type  (cons x (cdr pool))))
+                 (*dict (cons *pool (delete pool dict)))
+                 (id (length (cdr *pool))))
+            (cons (list type id) *dict))))))
 
 ;; (namespace-id? (package "")) => #t
 (define namespace-id?
@@ -1229,59 +1243,58 @@
 ;; Encode instructions
 ;; Because encoding of argument depends on each instruction, I need a
 ;; separate path to encode it again. It might be better to fix later.
-  
-(define encode-id-typed-add (lambda (pair dict cont)
-  (let ((type (car pair))
-	(value (cdr pair)))
-    (if (memq type '(integer uinteger double))
-	(encode-id-add type value dict cont)
-	(cont value dict)))))
 
-(define *encode-id-code (lambda (x dict cont)
-  (if (symbol? x)
-      (cont x dict)
-      (let* ((pos (car x))
-	     (statement (get-statement x))
-	     (symcode (car statement))
-	     (values (cdr statement))
-	     (types (cddr (hash-ref write-instruction-map symcode)))
-	     (pairs (map (lambda (type value) (cons type value)) types values)))
-	(encode-id-map encode-id-typed-add pairs dict 
-		       (lambda (args dict)
-			 (cont `(,symcode ,@args) dict)))))))
+(define encode-id-typed-add
+  (lambda (pair dict)
+    (let ((type (car pair))
+          (value (cdr pair)))
+      (if (memq type '(integer uinteger double))
+          (encode-id-add type value dict)
+          (cons value dict)))))
+
+(define *encode-id-code
+  (lambda (x dict)
+    (if (symbol? x)
+        (cons x dict)
+        (let* ((pos (car x))
+               (statement (get-statement x))
+               (symcode (car statement))
+               (values (cdr statement))
+               (types (cddr (hash-ref write-instruction-map symcode)))
+               (pairs (map (lambda (type value) (cons type value)) types values)))
+          (let ((result (encode-id-map encode-id-typed-add pairs dict)))
+            (cons`(,symcode ,@(car result)) (cdr result)))))))
 
 (define encode-id-code
-  (lambda (x dict cont)
-    (encode-id-map *encode-id-code (cadr x) dict
-      (lambda (x dict) (cont (list 'code x) dict)))))
+  (lambda (x dict)
+    (let ((result (encode-id-map *encode-id-code (cadr x) dict)))
+      (cons (list 'code (car result)) (cdr result)))))
 
 ;; Encode literals into index form, and build a constant dictionary.
 ;; "hello" => (string 1)
-;;
-;; CPS style encoder. Encoded expression and new dictionary is passed to cont.
-;; cont is a function like (cont expr dictionary)
 
 (define encode-id-apply
-  (lambda (x dict cont)
+  (lambda (x dict)
     (cond
-     ((namespace-id? x) (encode-id-add 'namespace x  dict cont))
-     ((multiname-id? x) (encode-id-add 'multiname x  dict cont))
-     ((eq? (car x) 'code) (encode-id-code x dict cont))
-     (else (cont x dict)))))
+     ((namespace-id? x) (encode-id-add 'namespace x  dict))
+     ((multiname-id? x) (encode-id-add 'multiname x  dict))
+     ((eq? (car x) 'code) (encode-id-code x dict))
+     (else (cons x dict)))))
 
 (define encode-id
-  (lambda (x dict cont)
+  (lambda (x dict)
     (cond
-     ((string? x) (encode-id-add 'string x dict cont))
-     ((eq? x '*) (cont '(multiname 0) dict)) ;note: '* can be multiname, namespace, or ns_set. but never mind.
-     ((not (pair? x)) (cont x dict))
-     (else (encode-id-map encode-id x dict
-       (lambda (x dict) (encode-id-apply x dict cont)))))))
+     ((string? x) (encode-id-add 'string x dict))
+     ((eq? x '*) (cons '(multiname 0) dict)) ;note: '* can be multiname, namespace, or ns_set. but never mind.
+     ((not (pair? x)) (cons x dict))
+     (else (let ((result (encode-id-map encode-id x dict)))
+             (encode-id-apply (car result) (cdr result)))))))
 
 (define from-asm (lambda (x)
   (if (not (eq? (car x) 'asm)) (error (format "This is not a ASM form: ~a" x)) '())
-  (encode-id (cdr x) NEW-CONSTANT-DICT
-    (lambda (body dict)
+  (let ((result (encode-id (cdr x) NEW-CONSTANT-DICT)))
+    (let ((body (car result))
+          (dict (cdr result)))
       (let* ((ns_set (ref 'ns_set body '()))
 	     (method (ref 'method body))
 	     (script (ref 'script body))
