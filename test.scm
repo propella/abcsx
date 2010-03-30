@@ -169,7 +169,6 @@
 (check (to-bytes write-s32 (- 0 #x80000000)) => (bytes #x80 #x80 #x80 #x80 #x08))
 (check (to-bytes write-s32 #x7fffffff) => (bytes #xff #xff #xff #xff #x07))
 
-
 (check (from-bytes read-u32 (bytes 2)) => 2)
 (check (from-bytes read-u32 (bytes #xff #x07)) => #x3ff)
 (check (from-bytes read-u32 (bytes #xff #xff #x07)) => #x1ffff)
@@ -197,6 +196,7 @@
 		 (lambda (p) (read-list1 read-u30 p))
 		 '(1 2 3))
 
+(roundtrip-check write-s32 read-s32 -1)
 (roundtrip-check write-u30 read-u30 1)
 (roundtrip-check write-u30 read-u30 2)
 (roundtrip-check write-u30 read-u30 3)
