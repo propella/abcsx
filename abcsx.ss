@@ -27,12 +27,20 @@
 (define bytes->string bytes->string/utf-8)
 (define string->bytes string->bytes/utf-8)
 
-;;; Read a file
+;; Enumeration with two lists
+
+(define fold2 fold)
+(define map2 map)
+(define for-each2 for-each)
+
+;; Read a file
+
 (define (read-file infile)
   (call-with-input-file infile
     (lambda (port) (read port))))
 
-;;; Write a file
+;; Write a file
+
 (define (write-file asm outfile)
   (call-with-output-file outfile
     (lambda (port)

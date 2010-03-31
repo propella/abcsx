@@ -161,7 +161,7 @@
 
 (check (from-bytes read-s32 (bytes #x02)) => 2)
 (check (from-bytes read-s32 (bytes #xfe #xff #xff #xff #x0f)) => -2)
-(check (from-bytes read-s32 (bytes #x80 #x80 #x80 #x80 #x08)) => (- 0 #x80000000))
+(check (from-bytes read-s32 (bytes #x80 #x80 #x80 #x80 #x08)) => -2147483648) ; #-x80000000
 (check (from-bytes read-s32 (bytes #xff #xff #xff #xff #x07)) => #x7fffffff)
 
 (check (to-bytes write-s32 2) => (bytes #x02))
@@ -300,6 +300,22 @@
 		   (multiname (((namespace 2) (string 1))
 			       ((namespace 1) (string 2))))
 		   )) => (bytes #x4 #xf6 #xff #xff #xff #xf #x0 #xa #x4 #xa #x14 #x1e #x1 #x4 #x5 #x68 #x65 #x6c #x6c #x6f #x5 #x77 #x6f #x72 #x6c #x64 #xd #x66 #x6c #x61 #x73 #x68 #x2e #x64 #x69 #x73 #x70 #x6c #x61 #x79 #x3 #x5 #x1 #x16 #x3 #x3 #x1 #x1 #x2 #x1 #x2 #x3 #x7 #x2 #x1 #x7 #x1 #x2 ))
+
+;;; cpool_info reader
+
+(check (from-bytes read-cpool_info
+                   (bytes #x4 #xf6 #xff #xff #xff #xf #x0 #xa #x4 #xa #x14 #x1e #x1 #x4 #x5 #x68 #x65 #x6c #x6c #x6f #x5 #x77 #x6f #x72 #x6c #x64 #xd #x66 #x6c #x61 #x73 #x68 #x2e #x64 #x69 #x73 #x70 #x6c #x61 #x79 #x3 #x5 #x1 #x16 #x3 #x3 #x1 #x1 #x2 #x1 #x2 #x3 #x7 #x2 #x1 #x7 #x1 #x2 ))
+       => '((integer (-10 0 10))
+            (uinteger (10 20 30))
+            (double ())
+            (string ("hello" "world" "flash.display"))
+            (namespace ((private (string 1))
+                        (package (string 3))))
+            (ns_set ((ns_set (namespace 1))
+                     (ns_set (namespace 1) (namespace 2))))
+            (multiname (((namespace 2) (string 1))
+                        ((namespace 1) (string 2))))
+            ))
 
 ;;; Round trip of cpool_info
 (roundtrip-check write-cpool_info read-cpool_info

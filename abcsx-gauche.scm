@@ -28,6 +28,12 @@
 (set! *load-path* (cons "." *load-path*))
 (load "check.scm") ;; srfi-78 Lightweight testing
 
+;; Enumeration with two lists
+
+(define fold2 fold)
+(define map2 map)
+(define for-each2 for-each)
+
 ;; Arithmetic
 
 (define bitwise-and logand)

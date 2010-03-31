@@ -790,11 +790,19 @@
 ;; dictionary is like ((key0 value0) (key1 value1) ...)
 ;; The optional third argument is returned if the key is not found.
 
-(define ref (lambda (key dictionary . default)
-  (let ((found (assoc key dictionary)))
-    (cond (found (cadr found))
-	  ((not (null? default)) (car default))
-	  (else (error (format "'~a' is not found in ~a." key dictionary)))))))
+(define ref*
+  (lambda (key dictionary default)
+    (let ((found (assoc key dictionary)))
+      (if found
+          (cadr found)
+          default))))
+
+(define ref
+  (lambda (key dictionary)
+    (let ((found (ref* key dictionary '**not-found**)))
+      (if (eq? found '**not-found**)
+          (error (format "'~a' is not found in ~a." key dictionary))
+          found))))
 
 (define write-method_info (lambda (x port)
   (let* ((param_type (ref 'param_type x))
@@ -945,7 +953,7 @@
 	   (spec (hash-ref write-instruction-map inst))
 	   (arg-types (cddr spec))
 	   (arg-values (cdr statement))
-	   (arg-length (fold instruction-arg-length 0 arg-types arg-values)))
+	   (arg-length (fold2 instruction-arg-length 0 arg-types arg-values)))
       (add1 arg-length))))
 
 ;; Add into dst-labels if the line is a label (symbol),
@@ -1008,8 +1016,9 @@
   (let ((offset (+ (file-position port) 3)))
     (write-s24 (- (cadr x) offset) port))))
 
-(define write-arguments (lambda (args spec port)
-  (for-each (lambda (type arg)
+(define write-arguments
+  (lambda (args spec port)
+  (for-each2 (lambda (type arg)
 	      (cond
 	       ((eq? type 'u8) (write-u8 arg port))
 	       ((eq? type 's24) (write-s24 arg port))
@@ -1154,7 +1163,7 @@
 (define from-asm-make-hint
   (lambda (method)
     (let* ((hint (assoc 'hint method))
-	   (signature (ref 'signature method #f))
+	   (signature (ref* 'signature method #f))
 	   (local_count (if signature
 			    (length (ref 'param_type signature))
 			    0)))
@@ -1168,7 +1177,7 @@
 	'()
 	(let* ((method (car xs))
 	       (hint (from-asm-make-hint method))
-	       (trait (ref 'trait method '()))
+	       (trait (ref* 'trait method '()))
 	       (code (ref 'code method)))
 	  (cons `((method ,index)
 		  ,@hint
@@ -1261,7 +1270,7 @@
                (symcode (car statement))
                (values (cdr statement))
                (types (cddr (hash-ref write-instruction-map symcode)))
-               (pairs (map (lambda (type value) (cons type value)) types values)))
+               (pairs (map2 (lambda (type value) (cons type value)) types values)))
           (let ((result (encode-id-map encode-id-typed-add pairs dict)))
             (cons`(,symcode ,@(car result)) (cdr result)))))))
 
@@ -1295,13 +1304,13 @@
   (let ((result (encode-id (cdr x) NEW-CONSTANT-DICT)))
     (let ((body (car result))
           (dict (cdr result)))
-      (let* ((ns_set (ref 'ns_set body '()))
+      (let* ((ns_set (ref* 'ns_set body '()))
 	     (method (ref 'method body))
 	     (script (ref 'script body))
 	     (method-signature (from-asm-method-signature method))
-	     (metadata (ref 'metadata body '()))
-	     (instance (ref 'instance body '()))
-	     (class (ref 'class body '()))
+	     (metadata (ref* 'metadata body '()))
+	     (instance (ref* 'instance body '()))
+	     (class (ref* 'class body '()))
 	     (method_body (from-asm-method_body method))
 	     (constant (from-asm-constant dict ns_set)))
 	`(abc
