@@ -9,6 +9,7 @@ REGRESSION = examples/textField
 # asm test
 run :
 	./runasm.sh examples/hello.sx
+	./runasm.sh examples/type.sx
 	./runasm.sh examples/parseInt.sx
 	./runasm.sh examples/arithmetic.sx
 	./runasm.sh examples/ifte.sx
