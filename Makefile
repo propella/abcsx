@@ -3,30 +3,34 @@
 #ASM=./abcsx-gauche.scm -asm
 DUMP=./abcsx.ss -dump
 ASM=./abcsx.ss -asm
+RUNASM := ./runasm.sh
 
 REGRESSION = examples/textField
 
 # asm test
 run :
-	./runasm.sh examples/hello.sx
-	./runasm.sh examples/type.sx
-	./runasm.sh examples/parseInt.sx
-	./runasm.sh examples/arithmetic.sx
-	./runasm.sh examples/ifte.sx
-	./runasm.sh examples/callLocal.sx
-	./runasm.sh examples/call.sx
-	./runasm.sh examples/send.sx
-	./runasm.sh examples/closure.sx
-	./runasm.sh examples/class.sx
-	./runasm.sh examples/namespace.sx
-	./runasm.sh examples/array.sx
-	./runasm.sh examples/with.sx
-#	./runasm.sh examples/activation.sx -- works only before tamarin 711
+	$(RUNASM) examples/hello.sx
+	$(RUNASM) examples/type.sx
+	$(RUNASM) examples/parseInt.sx
+	$(RUNASM) examples/arithmetic.sx
+	$(RUNASM) examples/ifte.sx
+	$(RUNASM) examples/callLocal.sx
+	$(RUNASM) examples/call.sx
+	$(RUNASM) examples/send.sx
+	$(RUNASM) examples/closure.sx
+	$(RUNASM) examples/class.sx
+	$(RUNASM) examples/namespace.sx
+	$(RUNASM) examples/array.sx
+	$(RUNASM) examples/with.sx
+#	$(RUNASM) examples/activation.sx -- works only before tamarin 711
+
+run-gosh :
+	$(MAKE) ASM="./abcsx-gauche.scm -asm" run
 
 partial : examples/partial1.sx.abc examples/partial2.sx.abc
 	avmshell examples/partial1.sx.abc examples/partial2.sx.abc
 
-all : test test-dump run partial test-regression test-swf
+all : test test-dump run run-gosh partial test-regression test-swf
 
 # unit test
 test :
