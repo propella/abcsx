@@ -991,21 +991,20 @@
 ;; Replace a label to an offset reference
 ;; - A line of symbol (destination label) is ommited. e.g. L1 -> removed
 ;; - A line number is ommited if it exists. e.g. (42 jump L1) -> (jump (offset 7))
-(define *write-label-replace (lambda (lines dst-labels)
-  (if (null? lines)
-      '()
-      (let ((line (car lines)))
-	(if (symbol? line)
-	    (*write-label-replace (cdr lines) dst-labels) ; the line is label
-	    (let* ((statement (get-statement line))
-		   (inst (car statement))
-		   (args (cdr statement))
-		   (*line (if (and (= (length args) 1)
-				   (symbol? (car args)))
-			      (let ((offset (hash-ref dst-labels (car args))))
-				`(,inst (offset ,offset)))
-			      statement)))
-	      (cons *line (*write-label-replace (cdr lines) dst-labels))))))))
+(define *write-label-replace
+  (lambda (lines dst-labels)
+    (let ((lines (filter pair? lines)))
+      (map
+       (lambda (line)
+         (let* ((statement (get-statement line))
+                (inst (car statement))
+                (args (cdr statement)))
+           (if (and (= (length args) 1)
+                    (symbol? (car args)))
+               (let ((offset (hash-ref dst-labels (car args))))
+                 `(,inst (offset ,offset)))
+               statement)))
+       lines))))
 
 (define write-label-replace
   (lambda (lines)
@@ -1140,14 +1139,14 @@
 	  (*from-asm-make-hint-eval (cdr (get-statement line)) (cadr expr))
 	  0))))
 
-(define *from-asm-make-hint (lambda (lines stack max_stack local_count scope max_scope)
+(define _*from-asm-make-hint (lambda (lines stack max_stack local_count scope max_scope)
   (if (null? lines)
       `((max_stack ,max_stack)
 	(local_count ,(add1 local_count))
 	(init_scope_depth 0)
 	(max_scope_depth ,max_scope))
       (if (symbol? (car lines))
-	  (*from-asm-make-hint (cdr lines) stack max_stack local_count scope max_scope)
+	  (_*from-asm-make-hint (cdr lines) stack max_stack local_count scope max_scope)
 	  (let* ((statement (get-statement (car lines)))
 		 (spec (hash-ref hint-instruction-map (car statement)))
 		 (*stack (+ stack (from-asm-make-hint-eval 'stack statement spec)))
@@ -1156,7 +1155,27 @@
 		 (*local_count (max local_count local))
 		 (*scope (+ scope (from-asm-make-hint-eval 'scope statement spec)))
 		 (*max_scope (max max_scope *scope)))
-	    (*from-asm-make-hint (cdr lines) *stack *max_stack *local_count *scope *max_scope))))))
+	    (_*from-asm-make-hint (cdr lines) *stack *max_stack *local_count *scope *max_scope))))))
+
+(define *from-asm-make-hint
+  (lambda (lines stack max_stack local_count scope max_scope)
+    (while (pair? lines)
+      (if (symbol? (car lines))
+          '*do-nothing*
+          (let* ((statement (get-statement (car lines)))
+                 (spec (hash-ref hint-instruction-map (car statement)))
+                 (local (from-asm-make-hint-eval 'local statement spec))
+                 )
+            (set! stack (+ stack (from-asm-make-hint-eval 'stack statement spec)))
+            (set! max_stack (max max_stack stack))
+            (set! local_count (max local_count local))
+            (set! scope (+ scope (from-asm-make-hint-eval 'scope statement spec)))
+            (set! max_scope (max max_scope scope))))
+          (set! lines (cdr lines)))
+    `((max_stack ,max_stack)
+      (local_count ,(add1 local_count))
+      (init_scope_depth 0)
+      (max_scope_depth ,max_scope))))
 
 ;; Visit code and extract the hint information from it.
 ;; (hint ((max_stack ?) (local_count ?) (init_scope_depth 0) (max_scope_depth ?)))
@@ -1195,15 +1214,15 @@
 
 ;; Map a encode function on the list
 
-(define encode-id-map
+(define _encode-id-map
   (lambda (proc xs dict)
     (if (null? xs)
         (cons xs dict)
         (let* ((result (proc (car xs) dict))
-               (rest (encode-id-map proc (cdr xs) (cdr result))))
+               (rest (_encode-id-map proc (cdr xs) (cdr result))))
           (cons (cons (car result) (car rest)) (cdr rest))))))
 
-(define _encode-id-map
+(define encode-id-map
   (lambda (proc xs dict)
     (let ((pair
            (fold (lambda (x *pair) ;; switch to (*pair e) if fold-left.
