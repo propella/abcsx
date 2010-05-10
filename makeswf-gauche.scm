@@ -28,18 +28,6 @@
 (use binary.io)
 (use file.util)
 
-(define SPEC
-  '((frame-size . (3000 4000))
-    (frame-rate . 30)
-    (frame-count . 1)
-    (tags
-     (file-attribute)
-     (do-abc . "examples/textField.sx.abc")
-     (symbol-class . "Hello")
-     (set-background-color . (#xfa #x64 #x64))
-     (show-frame)
-     (end-tag))))
-
 (define call-with-output-bytes
   (lambda (proc)
     (string->u8vector (call-with-output-string proc))))
@@ -232,5 +220,47 @@
 (check (nbits-unsigned '(7)) => 3)
 
 ;;;; Main
+  
+(define run
+  (lambda (args)
+    (let ((infile '())
+	  (command asm)
+	  (is-abc #f))
+      (for-each
+       (lambda (opt)
+	 (cond
+	  ((equal? opt "-abc") (set! is-abc #t))
+	  ((equal? opt "-test") (set! command test))
+	  ((equal? opt "-asm") (set! command asm))
+	  ((equal? opt "-dump") (set! command dump))
+	  (#t (set! infile opt))))
+       args)
+      (command infile is-abc))))
 
-(write-swf SPEC (current-output-port))
+(define make-spec
+  (lambda (width height classname abcfile)
+    `((frame-size . (,(* width 20) ,(* height 20)))
+      (frame-rate . 30)
+      (frame-count . 1)
+      (tags
+       (file-attribute)
+       (do-abc . ,abcfile)
+       (symbol-class . ,classname)
+       (show-frame)
+       (end-tag)))))
+
+(define run
+  (lambda (args)
+    (if (= (length args) 4)
+        (let ((spec (make-spec (string->number (car args))
+                               (string->number (cadr args))
+                               (caddr args)
+                               (cadddr args)))
+              (outfile (string-append (caddr args) ".swf")))
+          (call-with-output-file outfile
+            (lambda (out) (write-swf spec out))))
+        (error "Usage: ./makeswf-gauche.scm width height classname abcfile"))))
+
+(define (main args)
+  (run (cdr args))
+  0)
