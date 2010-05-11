@@ -220,46 +220,66 @@
 (check (nbits-unsigned '(7)) => 3)
 
 ;;;; Main
-  
-(define run
-  (lambda (args)
-    (let ((infile '())
-	  (command asm)
-	  (is-abc #f))
-      (for-each
-       (lambda (opt)
-	 (cond
-	  ((equal? opt "-abc") (set! is-abc #t))
-	  ((equal? opt "-test") (set! command test))
-	  ((equal? opt "-asm") (set! command asm))
-	  ((equal? opt "-dump") (set! command dump))
-	  (#t (set! infile opt))))
-       args)
-      (command infile is-abc))))
 
 (define make-spec
-  (lambda (width height classname abcfile)
-    `((frame-size . (,(* width 20) ,(* height 20)))
-      (frame-rate . 30)
-      (frame-count . 1)
-      (tags
-       (file-attribute)
-       (do-abc . ,abcfile)
-       (symbol-class . ,classname)
-       (show-frame)
-       (end-tag)))))
+  (lambda (width height classname abcfiles)
+    (let* ((symbol-class
+            (if classname `((symbol-class . ,classname)) ()))
+           (do-abc
+            (map (lambda (abcfile) `(do-abc . ,abcfile)) abcfiles))
+           (tags (concatenate
+                  (list
+                   '((file-attribute))
+                   symbol-class
+                   do-abc
+                   '((show-frame)
+                     (end-tag))))))
+      
+      `((frame-size . (,(* width 20) ,(* height 20)))
+        (frame-rate . 30)
+        (frame-count . 1)
+        (tags ,@tags)))))
+
+(define usage
+  (lambda ()
+    (display "Usage: swfmake [options] abcfiles ...\n")
+    (display "  -o fileName : output file name\n")
+    (display "  -w width : horizontal size in px\n")
+    (display "  -h height : vertical size in px\n")
+    (display "  -c className : main class (must inherit flash.display.Sprite)\n")
+    (exit 1)))
+
+(define process-args
+  (lambda (args infiles outfile width height classname cont)
+    (if (pair? args)
+        (let ((key (car args)))
+          (cond 
+           ((equal? key "-o")
+            (process-args (cddr args) infiles (cadr args) width height classname cont))
+           ((equal? key "-w")
+            (process-args (cddr args) infiles outfile (cadr args) height classname cont))
+           ((equal? key "-h")
+            (process-args (cddr args) infiles outfile width (cadr args) classname cont))
+           ((equal? key "-c")
+            (process-args (cddr args) infiles outfile width height (cadr args) cont))
+           ('else
+            (process-args (cdr args) (cons (car args) infiles) outfile width height classname cont))))
+        (cont infiles
+              (or outfile (string-append (car (reverse infiles)) ".swf"))
+              (or width "100")
+              (or height "100") classname))))
 
 (define run
   (lambda (args)
-    (if (= (length args) 4)
-        (let ((spec (make-spec (string->number (car args))
-                               (string->number (cadr args))
-                               (caddr args)
-                               (cadddr args)))
-              (outfile (string-append (caddr args) ".swf")))
+    (process-args args () #f #f #f #f
+      (lambda (infiles outfile width height classname)
+        (let ((spec (make-spec (string->number width)
+                               (string->number height)
+                               classname
+                               infiles)))
+;          (print 'spec= spec)
           (call-with-output-file outfile
-            (lambda (out) (write-swf spec out))))
-        (error "Usage: ./makeswf-gauche.scm width height classname abcfile"))))
+            (lambda (out) (write-swf spec out))))))))
 
 (define (main args)
   (run (cdr args))

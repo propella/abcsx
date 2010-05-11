@@ -45,7 +45,7 @@ test-dump : examples/textField.abc
 test-swf :
 	$(ASM) examples/textField.sx
 #	./swf_abc.erl 100 100 Hello examples/textField.sx.abc
-	./makeswf-gauche.scm 100 100 Hello examples/textField.sx.abc
+	./makeswf-gauche.scm -w 100 -h 100 -c Hello -o Hello.swf examples/textField.sx.abc
 	open Hello.swf
 
 # regression test
