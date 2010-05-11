@@ -20,9 +20,6 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
-;; ./abcsx-gauche.scm examples/textField.sx
-;; ./makeswf-gauche.scm > test.swf
-
 (use srfi-1)
 (use srfi-4)
 (use binary.io)
@@ -191,7 +188,7 @@
       (write-bytes body out)
       )))
 
-(set! *load-path* (cons "." *load-path*))
+(set! *load-path* (cons (sys-dirname *program-name*) *load-path*))
 (load "check.scm") ;; srfi-78 Lightweight testing
 
 ;;;; Test cases
@@ -264,11 +261,13 @@
             (process-args (cddr args) infiles outfile width height (cadr args) cont))
            ('else
             (process-args (cdr args) (cons (car args) infiles) outfile width height classname cont))))
-        (cont infiles
-              (or outfile (string-append (car (reverse infiles)) ".swf"))
-              (or width "100")
-              (or height "100") classname))))
-
+        (if (pair? infiles)
+            (cont (reverse infiles)
+                  (or outfile (string-append (car (reverse infiles)) ".swf"))
+                  (or width "100")
+                  (or height "100") classname)
+            (usage)))))
+  
 (define run
   (lambda (args)
     (process-args args () #f #f #f #f
@@ -277,7 +276,6 @@
                                (string->number height)
                                classname
                                infiles)))
-;          (print 'spec= spec)
           (call-with-output-file outfile
             (lambda (out) (write-swf spec out))))))))
 
