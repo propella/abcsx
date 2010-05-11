@@ -1,5 +1,3 @@
-#!/usr/bin/env gosh
-
 ;; Copyright (c) 2010 Takashi Yamamiya
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,21 +18,19 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
-(use srfi-1)
-(use srfi-4)
-(use binary.io)
-(use file.util)
+(define write-u8 write-byte)
 
-(define call-with-output-bytes
-  (lambda (proc)
-    (string->u8vector (call-with-output-string proc))))
+(define write-u16
+  (lambda (n out)
+    (write-byte (bitwise-and n #xff) out)
+    (write-byte (bitwise-and (arithmetic-shift n -8) #xff) out)))
 
-(define bytes u8vector)
-(define bytes-length u8vector-length)
-(define write-bytes write-block)
-
-(define int
-  (lambda (n) (inexact->exact (truncate n))))
+(define write-u32
+  (lambda (n out)
+    (write-byte (bitwise-and n #xff) out)
+    (write-byte (bitwise-and (arithmetic-shift n -8) #xff) out)
+    (write-byte (bitwise-and (arithmetic-shift n -16) #xff) out)
+    (write-byte (bitwise-and (arithmetic-shift n -24) #xff) out)))
 
 (define nbits-unsigned
   (lambda (lst)
@@ -47,9 +43,9 @@
   (lambda (num nbits rest)
     (if (eq? nbits 0)
         rest
-        (push-bits (ash num -1)
+        (push-bits (arithmetic-shift num -1)
                      (- nbits 1)
-                     (cons (logand num 1) rest)))))
+                     (cons (bitwise-and num 1) rest)))))
 
 ;; Make a integer from the first nbits of list
 (define bits->u8
@@ -63,7 +59,8 @@
     (if (pair? lst)
         (begin 
           (write-u8 (bits->u8 lst) out)
-          (*write-bits (drop lst 8) out)))))
+          (*write-bits (drop lst 8) out))
+        '())))
 
 (define write-bits
   (lambda (bits out)
@@ -73,8 +70,8 @@
 
 (define write-fixed8dot8
   (lambda (n out)
-    (let* ((integer-part (inexact->exact (truncate n)))
-           (small-part (inexact->exact (truncate (* (/ (- n integer-part) 1) 256)))))
+    (let* ((integer-part (int n))
+           (small-part (int (* (/ (- n integer-part) 1) 256))))
       (write-u8 small-part out)
       (write-u8 integer-part out))))
 
@@ -93,12 +90,12 @@
   (lambda (type body out)
     (let ((size (bytes-length body)))
       (if (< size 63)
-          (let ((code-length (logior (ash type 6) size)))
-            (write-u16 code-length out 'little-endian)
+          (let ((code-length (bitwise-ior (arithmetic-shift type 6) size)))
+            (write-u16 code-length out)
             (write-bytes body out))
-          (let ((code-length (logior (ash type 6) 63)))
-            (write-u16 code-length out 'little-endian)
-            (write-u32 size out 'little-endian)
+          (let ((code-length (bitwise-ior (arithmetic-shift type 6) 63)))
+            (write-u16 code-length out)
+            (write-u32 size out)
             (write-bytes body out))))))
 
 (define write-rgb
@@ -119,27 +116,19 @@
       (record-header-body 76
                           (call-with-output-bytes
                            (lambda (p)
-                             (write-u16 num-symbols p 'little-endian)
-                             (write-u16 tag1 p 'little-endian)
+                             (write-u16 num-symbols p)
+                             (write-u16 tag1 p)
                              (write-string-type name1 p)))
                           out))))
 
-;; Make a byte array from file
-(define read-bytes-from-file
-  (lambda (infile)
-    (let ((size (file-size infile)))
-      (call-with-input-file infile
-        (lambda (input)
-          (string->u8vector (read-block size input)))))))
-
 (define write-do-abc
   (lambda (infile out)
-    (let ((abc-data (read-bytes-from-file infile))
+    (let ((abc-data (file->bytes infile))
           (flags 0))
       (record-header-body 82
                           (call-with-output-bytes
                            (lambda (p)
-                             (write-u32 flags p 'little-endian)
+                             (write-u32 flags p)
                              (write-string-type infile p)
                              (write-bytes abc-data p)))
                            out))))
@@ -155,7 +144,8 @@
                             (call-with-output-bytes
                              (lambda (p) (write-rgb (cdr tag) p)))
                             out))
-       ((eq? name 'file-attribute) (record-header-body 69 (bytes #b00001000 0 0 0) out))
+;       ((eq? name 'file-attribute) (record-header-body 69 (bytes #b00001000 0 0 0) out))
+       ((eq? name 'file-attribute) (record-header-body 69 (bytes #x0f 0 0 0) out))
        ((eq? name 'symbol-class) (write-symbol-class (cdr tag) out))
        ((eq? name 'do-abc) (write-do-abc (cdr tag) out))
        ('else (error "unknown tag:" name))))))
@@ -173,7 +163,7 @@
                        (lambda (p) (write-tags tags p)))))
       (write-rectangle 0 (car frame-size) 0 (cadr frame-size) out)
       (write-fixed8dot8 frame-rate out)
-      (write-u16 frame-count out 'little-endian)
+      (write-u16 frame-count out)
       (write-bytes tags-data out))))
 
 (define write-swf
@@ -182,48 +172,20 @@
            (body (call-with-output-bytes
                   (lambda (p) (write-body spec p))))
            (body-length (+ (bytes-length body) 8)))
-      (display "FWS" out)
-      (write-u8 version out 'little-endian)
-      (write-u32 body-length out 'little-endian)
+      (write-u8 #x46 out) ; F
+      (write-u8 #x57 out) ; W
+      (write-u8 #x53 out) ; S
+      (write-u8 version out)
+      (write-u32 body-length out)
       (write-bytes body out)
       )))
-
-(set! *load-path* (cons (sys-dirname *program-name*) *load-path*))
-(load "check.scm") ;; srfi-78 Lightweight testing
-
-;;;; Test cases
-
-;; proc is (proc obj port)
-(define to-bytes
-  (lambda (proc obj) (call-with-output-bytes (lambda (port) (proc obj port)))))
-
-(check (push-bits 1 1 ()) => '(1))
-(check (push-bits 7 3 '(0 0 0)) => '(1 1 1 0 0 0))
-
-(check (to-bytes write-fixed8dot8 1.0) => (bytes #x00 #x01))
-(check (to-bytes write-fixed8dot8 1.5) => (bytes #x80 #x01))
-(check (bits->u8 '(0 0 0 0  0 0 0 1)) => #x01)
-(check (bits->u8 '(1 0 0 0  0 0 0 0)) => #x80)
-(check (to-bytes *write-bits '(0 0 0 1 0 0 0 0)) => (bytes #x10))
-(check (to-bytes *write-bits '(0 0 0 0 1 1 1 1  0 0 0 1 0 0 0 0)) => (bytes #x0f #x10))
-(check (to-bytes write-bits '(0 0 0 0 1 1 1 1  0 0 0 1)) => (bytes #x0f #x10))
-(check (to-bytes write-rgb '(#x12 #x34 #x56)) => (bytes #x12 #x34 #x56))
-
-(check (call-with-output-bytes
-        (lambda (out) (record-header-body 0 (bytes) out))) => (bytes 0 0))
-(check (call-with-output-bytes
-        (lambda (out) (record-header-body 1 (bytes 1 2 3) out))) => (bytes #x43 00 1 2 3))
-
-(check (nbits-unsigned '(7)) => 3)
-
-;;;; Main
 
 (define make-spec
   (lambda (width height classname abcfiles)
     (let* ((symbol-class
-            (if classname `((symbol-class . ,classname)) ()))
+            (if classname `(,(cons 'symbol-class classname)) ()))
            (do-abc
-            (map (lambda (abcfile) `(do-abc . ,abcfile)) abcfiles))
+            (map (lambda (abcfile) (cons 'do-abc abcfile)) abcfiles))
            (tags (concatenate
                   (list
                    '((file-attribute))
@@ -233,8 +195,8 @@
                      (end-tag))))))
       
       `((frame-size . (,(* width 20) ,(* height 20)))
-        (frame-rate . 30)
-        (frame-count . 1)
+        ,(cons 'frame-rate 30)
+        ,(cons 'frame-count  1)
         (tags ,@tags)))))
 
 (define usage
@@ -263,7 +225,7 @@
             (process-args (cdr args) (cons (car args) infiles) outfile width height classname cont))))
         (if (pair? infiles)
             (cont (reverse infiles)
-                  (or outfile (string-append (car (reverse infiles)) ".swf"))
+                  (or outfile (string-append classname ".swf"))
                   (or width "100")
                   (or height "100") classname)
             (usage)))))
@@ -278,7 +240,3 @@
                                infiles)))
           (call-with-output-file outfile
             (lambda (out) (write-swf spec out))))))))
-
-(define (main args)
-  (run (cdr args))
-  0)
