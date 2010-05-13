@@ -32,10 +32,15 @@
     (write-byte (bitwise-and (arithmetic-shift n -16) #xff) out)
     (write-byte (bitwise-and (arithmetic-shift n -24) #xff) out)))
 
+(define int-log2 ;; poor man's log2 function
+  (lambda (n i)
+    (if (eq? n 0) i (int-log2 (arithmetic-shift n -1) (+ i 1)))))
+
 (define nbits-unsigned
   (lambda (lst)
     (let ((max (fold max 0 lst)))
-      (+ (int (/ (log max) (log 2))) 1))))
+      (int-log2 max 0))))
+
 (define nbits-signed
   (lambda (lst) (+ (nbits-unsigned lst) 1)))
 
@@ -106,7 +111,7 @@
 
 (define write-string-type
   (lambda (str out)
-    (display str out)
+    (write-bytes (string->bytes str) out)
     (write-u8 0 out)))
 
 (define write-symbol-class
@@ -172,9 +177,7 @@
            (body (call-with-output-bytes
                   (lambda (p) (write-body spec p))))
            (body-length (+ (bytes-length body) 8)))
-      (write-u8 #x46 out) ; F
-      (write-u8 #x57 out) ; W
-      (write-u8 #x53 out) ; S
+      (write-bytes (string->bytes "FWS") out)
       (write-u8 version out)
       (write-u32 body-length out)
       (write-bytes body out)
@@ -201,11 +204,8 @@
 
 (define usage
   (lambda ()
-    (display "Usage: swfmake [options] abcfiles ...\n")
-    (display "  -o fileName : output file name\n")
-    (display "  -w width : horizontal size in px\n")
-    (display "  -h height : vertical size in px\n")
-    (display "  -c className : main class (must inherit flash.display.Sprite)\n")
+    (display "Usage: swfmake [-w width] [-h height] [-o outfile] [-c classname] abcfiles ...\n")
+    (display "  if -o is ommited, last abcfile name is used for output.\n")
     (exit 1)))
 
 (define process-args
@@ -225,7 +225,7 @@
             (process-args (cdr args) (cons (car args) infiles) outfile width height classname cont))))
         (if (pair? infiles)
             (cont (reverse infiles)
-                  (or outfile (string-append classname ".swf"))
+                  (or outfile (string-append (trim-extension (car (reverse infiles))) ".swf"))
                   (or width "100")
                   (or height "100") classname)
             (usage)))))

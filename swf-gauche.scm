@@ -1,5 +1,8 @@
 #!/usr/bin/env gosh
 
+;; Usage: swfmake [-w width] [-h height] [-o outfile] [-c classname] abcfiles ...
+;;   if -o is ommited, last abcfile name is used for output.
+
 ;; Copyright (c) 2010 Takashi Yamamiya
 ;;
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -37,12 +40,22 @@
         (lambda (input)
           (string->u8vector (read-block size input)))))))
 
+;; Return a copy of the string witout extension.
+(define trim-extension
+  (lambda (string)
+    (let ((reversed (drop-while
+                     (lambda (c) (not (eq? c #\.)))
+                     (reverse (string->list string)))))
+      (list->string
+       (reverse (if (pair? reversed) (cdr reversed) reversed))))))
+
 (define bytes u8vector)
 (define bytes-length u8vector-length)
 (define write-bytes write-block)
 (define arithmetic-shift ash)
 (define bitwise-and logand)
 (define bitwise-ior logior)
+(define string->bytes string->u8vector)
 
 (define int
   (lambda (n) (inexact->exact (truncate n))))
