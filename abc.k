@@ -79,9 +79,9 @@
 (define read-s32
   (lambda (port)
     (let ((u32 (read-u32 port)))
-      (if (< u32 #x80000000)
-	  u32
-	  (- u32 #x100000000)))))
+      (if (< #x7fffffff u32)
+	  (- u32 #x100000000)
+          u32))))
 
 ;; 8-byte IEEE-754 floating point value.
 (define read-d64
