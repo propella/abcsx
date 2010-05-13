@@ -32,14 +32,10 @@
     (write-byte (bitwise-and (arithmetic-shift n -16) #xff) out)
     (write-byte (bitwise-and (arithmetic-shift n -24) #xff) out)))
 
-(define int-log2 ;; poor man's log2 function
-  (lambda (n i)
-    (if (eq? n 0) i (int-log2 (arithmetic-shift n -1) (+ i 1)))))
-
 (define nbits-unsigned
   (lambda (lst)
     (let ((max (fold max 0 lst)))
-      (int-log2 max 0))))
+      (+ (int (/ (log max) (log 2))) 1))))
 
 (define nbits-signed
   (lambda (lst) (+ (nbits-unsigned lst) 1)))
