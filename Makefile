@@ -4,6 +4,7 @@ export ASM=./abcsx-gauche.scm -asm
 #DUMP=./abcsx.ss -dump
 #ASM=./abcsx.ss -asm
 RUNASM := ./runasm.sh
+SWFMAKE = ./swf-gauche.scm
 
 REGRESSION = examples/textField
 
@@ -42,11 +43,15 @@ test-dump : examples/textField.abc
 	$(DUMP) examples/textField.abc
 
 # swf test
-test-swf :
-	$(ASM) examples/textField.sx
-#	./swf_abc.erl 100 100 Hello examples/textField.sx.abc
-	./swf-gauche.scm -w 100 -h 100 -c Hello -o Hello.swf examples/textField.sx.abc
+test-swf : Hello.swf
 	open Hello.swf
+
+test-debug : Hello.swf
+	fdb Hello.swf
+
+Hello.swf : examples/textField.sx
+	$(ASM) examples/textField.sx
+	$(SWFMAKE) -w 100 -h 100 -c Hello -o $@ examples/textField.sx.abc
 
 # regression test
 test-regression :

@@ -54,6 +54,7 @@
             (frame-rate . 30)
             (frame-count . 1)
             (tags (file-attribute)
+                  (enable-debugger2 . "")
                   (symbol-class . Hello)
                   (do-abc . "hello.abc")
                   (show-frame)

@@ -134,7 +134,15 @@
                              (write-bytes abc-data p)))
                            out))))
 
-      (define write-tag
+(define write-enable-debugger2
+  (lambda (str out)
+    (let ((bytes (call-with-output-bytes
+                  (lambda (p)
+                    (write-u16 0 p)
+                    (write-string-type str p)))))
+      (record-header-body 64 bytes out))))
+
+(define write-tag
   (lambda (tag out)
     (let ((name (car tag)))
       (cond
@@ -147,6 +155,7 @@
                             out))
 ;       ((eq? name 'file-attribute) (record-header-body 69 (bytes #b00001000 0 0 0) out))
        ((eq? name 'file-attribute) (record-header-body 69 (bytes #x0f 0 0 0) out))
+       ((eq? name 'enable-debugger2) (write-enable-debugger2 (cdr tag) out))
        ((eq? name 'symbol-class) (write-symbol-class (cdr tag) out))
        ((eq? name 'do-abc) (write-do-abc (cdr tag) out))
        ('else (error "unknown tag:" name))))))
@@ -187,7 +196,10 @@
             (map (lambda (abcfile) (cons 'do-abc abcfile)) abcfiles))
            (tags (concatenate
                   (list
-                   '((file-attribute))
+                   '(
+		     (file-attribute)
+		     (enable-debugger2 . "")
+		     )
                    symbol-class
                    do-abc
                    '((show-frame)
