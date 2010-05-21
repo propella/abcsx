@@ -165,10 +165,10 @@
 
 (define write-body
   (lambda (spec out)
-    (let* ((frame-size (cdr (assoc 'frame-size spec)))
-           (frame-rate (cdr (assoc 'frame-rate spec)))
-           (frame-count (cdr (assoc 'frame-count spec)))
-           (tags (cdr (assoc 'tags spec)))
+    (let* ((frame-size (cdr (assq 'frame-size spec)))
+           (frame-rate (cdr (assq 'frame-rate spec)))
+           (frame-count (cdr (assq 'frame-count spec)))
+           (tags (cdr (assq 'tags spec)))
            (tags-data (call-with-output-bytes
                        (lambda (p) (write-tags tags p)))))
       (write-rectangle 0 (car frame-size) 0 (cadr frame-size) out)

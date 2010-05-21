@@ -130,7 +130,7 @@
 (define read-namespace_info (lambda (port)
   (let ((kind (read-u8 port))
 	(name (read-id 'string port)))
-    `(,(cdr (assoc kind CONSTANT_Namespace)) ,name))))
+    `(,(cdr (assq kind CONSTANT_Namespace)) ,name))))
 
 ;;; ns_set_info reader
 
@@ -552,13 +552,13 @@
 			   (= (cadr id) index)))
 		       method-bodies))
 	       (method-body1 (cdr method-body)) ; remove '(method id) in the method-body
-	       (max_stack (assoc 'max_stack method-body))
-	       (local_count (assoc 'local_count method-body))
-	       (init_scope_depth (assoc 'init_scope_depth method-body))
-	       (max_scope_depth (assoc 'max_scope_depth method-body))
-	       (code (assoc 'code method-body))
-	       (exception (assoc 'exception method-body))
-	       (trait (assoc 'trait method-body))
+	       (max_stack (assq 'max_stack method-body))
+	       (local_count (assq 'local_count method-body))
+	       (init_scope_depth (assq 'init_scope_depth method-body))
+	       (max_scope_depth (assq 'max_scope_depth method-body))
+	       (code (assq 'code method-body))
+	       (exception (assq 'exception method-body))
+	       (trait (assq 'trait method-body))
 	       (method `((signature ,(car methods))
 			 (hint (,max_stack ,local_count ,init_scope_depth ,max_scope_depth))
 			 ,code
@@ -571,8 +571,8 @@
 ;; So I have to make reverse reference by my hand.
 (define set-method-body
   (lambda (abc)
-    (let* ((method (assoc 'method abc))
-	   (method-bodies (cadr (assoc 'method_body abc)))
+    (let* ((method (assq 'method abc))
+	   (method-bodies (cadr (assq 'method_body abc)))
 	   (methods (make-method-body-reference (cadr method) method-bodies 0)))
       (map (lambda (tag)
 	     (if (eq? (car tag) 'method) `(method ,methods)
@@ -582,8 +582,8 @@
 ;; find one-base index from the constant pool
 (define find-constant
   (lambda (type id default abc)
-    (let* ((pool (cadr (assoc 'constant_pool abc)))
-	   (table (cadr (assoc type pool))))
+    (let* ((pool (cadr (assq 'constant_pool abc)))
+	   (table (cadr (assq type pool))))
       (if (zero? id)
 	  default
 	  (decode-id (list-ref table (- id 1)) abc)))))
@@ -620,19 +620,19 @@
 (define find-element
   (lambda (type id abc)
     (let* ((pool abc)
-	   (table (cadr (assoc type pool))))
+	   (table (cadr (assq type pool))))
       (decode-id (list-ref table id) abc))))
 
 (define to-asm
   (lambda (abc)
     (let* ((*abc (set-method-body (cdr abc)))
 	   (**abc (decode-id *abc *abc))
-	   (cpool (assoc 'constant_pool **abc))
-	   (ns_set (assoc 'ns_set (cadr cpool)))
-	   (method (assoc 'method **abc))
-	   (instance (assoc 'instance **abc))
-	   (class (assoc 'class **abc))
-	   (script (assoc 'script **abc)))
+	   (cpool (assq 'constant_pool **abc))
+	   (ns_set (assq 'ns_set (cadr cpool)))
+	   (method (assq 'method **abc))
+	   (instance (assq 'instance **abc))
+	   (class (assq 'class **abc))
+	   (script (assq 'script **abc)))
       (list 'asm ns_set method instance class script))))
 
 ;;;;;;;;;; ABC Form Writer ;;;;;;;;;;
@@ -727,7 +727,7 @@
 (define write-namespace_info (lambda (x port)
   (let ((kind (car x))
 	(name (cadr (cadr x))))
-    (write-u8 (cdr (assoc kind CONSTANT_Namespace_write)) port)
+    (write-u8 (cdr (assq kind CONSTANT_Namespace_write)) port)
     (write-u30 name port))))
 
 (define write-ns_set_info
@@ -776,13 +776,13 @@
 
 (define write-cpool_info
   (lambda (x port)
-    (write-list1 write-s32 (cadr (assoc 'integer x)) port)
-    (write-list1 write-u32 (cadr (assoc 'uinteger x)) port)
-    (write-list1 write-d64 (cadr (assoc 'double x)) port)
-    (write-list1 write-string_info (cadr (assoc 'string x)) port)
-    (write-list1 write-namespace_info (cadr (assoc 'namespace x)) port)
-    (write-list1 write-ns_set_info (cadr (assoc 'ns_set x)) port)
-    (write-list1 write-multiname_info (cadr (assoc 'multiname x)) port)))
+    (write-list1 write-s32 (cadr (assq 'integer x)) port)
+    (write-list1 write-u32 (cadr (assq 'uinteger x)) port)
+    (write-list1 write-d64 (cadr (assq 'double x)) port)
+    (write-list1 write-string_info (cadr (assq 'string x)) port)
+    (write-list1 write-namespace_info (cadr (assq 'namespace x)) port)
+    (write-list1 write-ns_set_info (cadr (assq 'ns_set x)) port)
+    (write-list1 write-multiname_info (cadr (assq 'multiname x)) port)))
 
 ;;; method_info writer
 
@@ -792,7 +792,7 @@
 
 (define ref*
   (lambda (key dictionary default)
-    (let ((found (assoc key dictionary)))
+    (let ((found (assq key dictionary)))
       (if found
           (cadr found)
           default))))
@@ -873,7 +873,7 @@
 
 (define write-traits_info
   (lambda (x port)
-    (let ((kind (cadr (assoc 'kind x))))
+    (let ((kind (cadr (assq 'kind x))))
       (cond
        ((eq? kind 'slot) (*write-traits_info write-trait_slot Trait_Slot x port))
        ((eq? kind 'method) (*write-traits_info write-trait_method Trait_Method x port))
@@ -1082,7 +1082,7 @@
 	   (class_count (length instance)))
       (write-u16 16 port)
       (write-u16 46 port)
-      (write-cpool_info (cadr (assoc 'constant_pool *abc)) port)
+      (write-cpool_info (cadr (assq 'constant_pool *abc)) port)
       (write-list0 write-method_info (ref 'method *abc) port)
       (write-list0 write-metadata_info (ref 'metadata *abc) port)
       (write-u30 class_count port)
@@ -1103,13 +1103,13 @@
 
 (define from-asm-constant (lambda (dict ns_set)
   (list
-   (list 'integer (reverse (cdr (assoc 'integer dict))))
-   (list 'uinteger (reverse (cdr (assoc 'uinteger dict))))
-   (list 'double (reverse (cdr (assoc 'double dict))))
-   (list 'string (reverse (cdr (assoc 'string dict))))
-   (list 'namespace (reverse (cdr (assoc 'namespace dict))))
+   (list 'integer (reverse (cdr (assq 'integer dict))))
+   (list 'uinteger (reverse (cdr (assq 'uinteger dict))))
+   (list 'double (reverse (cdr (assq 'double dict))))
+   (list 'string (reverse (cdr (assq 'string dict))))
+   (list 'namespace (reverse (cdr (assq 'namespace dict))))
    (list 'ns_set ns_set)
-   (list 'multiname (reverse (cdr (assoc 'multiname dict))))
+   (list 'multiname (reverse (cdr (assq 'multiname dict))))
 )))
 
 (define from-asm-method-signature (lambda (xs)
@@ -1133,7 +1133,7 @@
 
 (define from-asm-make-hint-eval
   (lambda (key line spec)
-    (let ((expr (assoc key spec)))
+    (let ((expr (assq key spec)))
 ;(pretty-print expr)
       (if expr
 	  (*from-asm-make-hint-eval (cdr (get-statement line)) (cadr expr))
@@ -1181,7 +1181,7 @@
 ;; (hint ((max_stack ?) (local_count ?) (init_scope_depth 0) (max_scope_depth ?)))
 (define from-asm-make-hint
   (lambda (method)
-    (let* ((hint (assoc 'hint method))
+    (let* ((hint (assq 'hint method))
 	   (signature (ref* 'signature method #f))
 	   (local_count (if signature
 			    (length (ref 'param_type signature))
@@ -1241,7 +1241,7 @@
 ;; Register a value into the dictionary
 (define encode-id-add
   (lambda (type x dict)
-    (let* ((pool (assoc type dict))
+    (let* ((pool (assq type dict))
            (found (member x (cdr pool))))
       (if found
           (cons (list type (length found)) dict)

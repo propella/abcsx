@@ -319,7 +319,7 @@
 
 ;;; Round trip of cpool_info
 (roundtrip-check write-cpool_info read-cpool_info
-		 (cadr (assoc 'constant_pool test-abc-data)))
+		 (cadr (assq 'constant_pool test-abc-data)))
 
 ;;; Round trip of method_info
 (roundtrip-check write-method_info read-method_info
@@ -485,13 +485,13 @@
 
 (let ((r (encode-id-add 'string "first word" NEW-CONSTANT-DICT)))
   (check (car r) => '(string 1))
-  (check (assoc 'string (cdr r)) => '(string "first word")))
+  (check (assq 'string (cdr r)) => '(string "first word")))
 
 (apply-encode-id
  (lambda () (encode-id-add 'string "first word" NEW-CONSTANT-DICT))
  (lambda (x dict)
    (check x => '(string 1))
-   (check (assoc 'string dict) => '(string "first word"))
+   (check (assq 'string dict) => '(string "first word"))
    (apply-encode-id
     (lambda () (encode-id-add 'string "first word" dict))
     (lambda (x dict)
@@ -510,7 +510,7 @@
  (lambda () (encode-id-typed-add '(integer . 7) NEW-CONSTANT-DICT))
  (lambda (x dict)
    (check x => '(integer 1))
-   (check (assoc 'integer dict) => '(integer 7))))
+   (check (assq 'integer dict) => '(integer 7))))
 
 (apply-encode-id
  (lambda () (encode-id-map encode-id-typed-add
@@ -521,8 +521,8 @@
                             NEW-CONSTANT-DICT))
  (lambda (x dict)
    (check x => '((integer 1) (double 1) (integer 1) (integer 2)))
-   (check (assoc 'integer dict) => '(integer 42 7))
-   (check (assoc 'double dict) => '(double 3.14))))
+   (check (assq 'integer dict) => '(integer 42 7))
+   (check (assq 'double dict) => '(double 3.14))))
 
 (apply-encode-id
  (lambda () (encode-id-code '(code ((pushint 7)
@@ -537,9 +537,9 @@
                         (pushint (integer 1))
                         (pushint (integer 2))
                         (pushuint (uinteger 1)))))
-    (check (assoc 'integer dict) => '(integer 42 7))
-    (check (assoc 'uinteger dict) => '(uinteger 7))
-    (check (assoc 'double dict) => '(double 3.14))))
+    (check (assq 'integer dict) => '(integer 42 7))
+    (check (assq 'uinteger dict) => '(uinteger 7))
+    (check (assq 'double dict) => '(double 3.14))))
 
 ;;; list
 (check (car (encode-id-map encode-id '("hello" "world") NEW-CONSTANT-DICT))
