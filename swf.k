@@ -18,14 +18,14 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;; THE SOFTWARE.
 
-(define write-u8 write-byte)
+(define write-swf-u8 write-byte)
 
-(define write-u16
+(define write-swf-u16
   (lambda (n out)
     (write-byte (bitwise-and n #xff) out)
     (write-byte (bitwise-and (arithmetic-shift n -8) #xff) out)))
 
-(define write-u32
+(define write-swf-u32
   (lambda (n out)
     (write-byte (bitwise-and n #xff) out)
     (write-byte (bitwise-and (arithmetic-shift n -8) #xff) out)
@@ -59,7 +59,7 @@
   (lambda (lst out)
     (if (pair? lst)
         (begin 
-          (write-u8 (bits->u8 lst) out)
+          (write-swf-u8 (bits->u8 lst) out)
           (*write-bits (drop lst 8) out))
         '())))
 
@@ -73,8 +73,8 @@
   (lambda (n out)
     (let* ((integer-part (int n))
            (small-part (int (* (/ (- n integer-part) 1) 256))))
-      (write-u8 small-part out)
-      (write-u8 integer-part out))))
+      (write-swf-u8 small-part out)
+      (write-swf-u8 integer-part out))))
 
 (define write-rectangle
   (lambda (xmin xmax ymin ymax out)
@@ -92,23 +92,23 @@
     (let ((size (bytes-length body)))
       (if (< size 63)
           (let ((code-length (bitwise-ior (arithmetic-shift type 6) size)))
-            (write-u16 code-length out)
+            (write-swf-u16 code-length out)
             (write-bytes body out))
           (let ((code-length (bitwise-ior (arithmetic-shift type 6) 63)))
-            (write-u16 code-length out)
-            (write-u32 size out)
+            (write-swf-u16 code-length out)
+            (write-swf-u32 size out)
             (write-bytes body out))))))
 
 (define write-rgb
   (lambda (rgb out)
-    (write-u8 (car rgb) out)
-    (write-u8 (cadr rgb) out)
-    (write-u8 (caddr rgb) out)))
+    (write-swf-u8 (car rgb) out)
+    (write-swf-u8 (cadr rgb) out)
+    (write-swf-u8 (caddr rgb) out)))
 
 (define write-string-type
   (lambda (str out)
     (write-bytes (string->bytes str) out)
-    (write-u8 0 out)))
+    (write-swf-u8 0 out)))
 
 (define write-symbol-class
   (lambda (name1 out)
@@ -117,28 +117,29 @@
       (record-header-body 76
                           (call-with-output-bytes
                            (lambda (p)
-                             (write-u16 num-symbols p)
-                             (write-u16 tag1 p)
+                             (write-swf-u16 num-symbols p)
+                             (write-swf-u16 tag1 p)
                              (write-string-type name1 p)))
                           out))))
 
 (define write-do-abc
-  (lambda (infile out)
-    (let ((abc-data (file->bytes infile))
+  (lambda (lst out)
+    (let ((name (car lst))
+          (bs (cadr lst))
           (flags 0))
       (record-header-body 82
                           (call-with-output-bytes
                            (lambda (p)
-                             (write-u32 flags p)
-                             (write-string-type infile p)
-                             (write-bytes abc-data p)))
+                             (write-swf-u32 flags p)
+                             (write-string-type name p)
+                             (write-bytes bs p)))
                            out))))
 
 (define write-enable-debugger2
   (lambda (str out)
     (let ((bytes (call-with-output-bytes
                   (lambda (p)
-                    (write-u16 0 p)
+                    (write-swf-u16 0 p)
                     (write-string-type str p)))))
       (record-header-body 64 bytes out))))
 
@@ -173,7 +174,7 @@
                        (lambda (p) (write-tags tags p)))))
       (write-rectangle 0 (car frame-size) 0 (cadr frame-size) out)
       (write-fixed8dot8 frame-rate out)
-      (write-u16 frame-count out)
+      (write-swf-u16 frame-count out)
       (write-bytes tags-data out))))
 
 (define write-swf
@@ -183,17 +184,21 @@
                   (lambda (p) (write-body spec p))))
            (body-length (+ (bytes-length body) 8)))
       (write-bytes (string->bytes "FWS") out)
-      (write-u8 version out)
-      (write-u32 body-length out)
+      (write-swf-u8 version out)
+      (write-swf-u32 body-length out)
       (write-bytes body out)
       )))
+
+;; (abc-data (file->bytes infile))
 
 (define make-spec
   (lambda (width height classname abcfiles)
     (let* ((symbol-class
             (if classname `(,(cons 'symbol-class classname)) ()))
            (do-abc
-            (map (lambda (abcfile) (cons 'do-abc abcfile)) abcfiles))
+            (map (lambda (abcfile)
+                   (cons 'do-abc (list abcfile (file->bytes abcfile))))
+                 abcfiles))
            (tags (concatenate
                   (list
                    '(
@@ -204,7 +209,6 @@
                    do-abc
                    '((show-frame)
                      (end-tag))))))
-      
       `((frame-size . (,(* width 20) ,(* height 20)))
         ,(cons 'frame-rate 30)
         ,(cons 'frame-count  1)
@@ -238,7 +242,7 @@
                   (or height "100") classname)
             (usage)))))
   
-(define run
+(define swf-run
   (lambda (args)
     (process-args args () #f #f #f #f
       (lambda (infiles outfile width height classname)
@@ -246,5 +250,6 @@
                                (string->number height)
                                classname
                                infiles)))
+(print spec)
           (call-with-output-file outfile
             (lambda (out) (write-swf spec out))))))))

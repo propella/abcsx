@@ -68,5 +68,5 @@
 ;;;; Main
 
 (define (main args)
-  (run (cdr args))
+  (swf-run (cdr args))
   0)
