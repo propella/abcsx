@@ -47,6 +47,14 @@
       (write-asm asm port))
     #:exists 'replace))
 
+(define-syntax while
+  (syntax-rules ()
+    ((while test body ...)
+     (let loop ()
+       (if test
+           (begin body ... (loop))
+           '())))))
+
 (include "instruction.k")
 (include "abc.k")
 (include "test.scm")

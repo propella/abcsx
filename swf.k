@@ -250,6 +250,5 @@
                                (string->number height)
                                classname
                                infiles)))
-(print spec)
           (call-with-output-file outfile
             (lambda (out) (write-swf spec out))))))))

@@ -1,14 +1,14 @@
-#DUMP=./dump.ss
-DUMP=./abcsx-gauche.scm -dump
-export ASM=./abcsx-gauche.scm -asm
-#DUMP=./abcsx.ss -dump
-#ASM=./abcsx.ss -asm
+DUMP=./abcsx.ss -dump
+ASM=./abcsx.ss -asm
+
+#DUMP=./abcsx-gauche.scm -dump
+#ASM=./abcsx-gauche.scm -asm
+
 RUNASM := ./runasm.sh
 SWFMAKE = ./swf-gauche.scm
 
 REGRESSION = examples/textField
 
-# asm test
 run :
 	$(RUNASM) examples/hello.sx
 	$(RUNASM) examples/type.sx
@@ -35,7 +35,7 @@ all : test test-dump run run-gosh partial test-regression test-swf
 
 # unit test
 test :
-#	./abcsx.ss -test
+	./abcsx.ss -test
 	./abcsx-gauche.scm -test
 
 # dump test
@@ -71,4 +71,3 @@ clean :
 
 %.sx.abc : %.sx
 	$(ASM) $<
-
