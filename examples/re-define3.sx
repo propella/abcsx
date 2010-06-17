@@ -10,12 +10,6 @@
 
       (getlex ((ns "") "print"))
       (pushnull)
-      (getlex ((ns "") "*global*"))
-      (call 1)
-      (pop)
-
-      (getlex ((ns "") "print"))
-      (pushnull)
       (getlex ((ns "") "x"))
       (call 1)
       (pop)

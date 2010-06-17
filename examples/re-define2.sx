@@ -8,32 +8,13 @@
            (getlocal 0) ;; Set up the globl scope.
            (pushscope)
 
-           (getlex ((ns "") "*global*")) ;; Configure *global* if it's undefined.
-           (iftrue L1)
-           (getlocal 0)
-           (getlocal 0)
-           (setproperty ((ns "") "*global*"))
-           L1
-           (getlex ((ns "") "*global*")) ;; Push *global* on above of the script environment.
-           (pushscope)
-
-           (findproperty ((ns "") "x"))
-           (pushstring "Second script defined this.")
-           (setproperty ((ns "") "x"))
-
-           (getlex ((ns "") "print"))
-           (pushnull)
-           (getlex ((ns "") "x"))
-           (call 1)
-           (pop)
+           (findproperty ((ns "") "x")) ;; findproperty skips current scope if x is undefined.
+           (pushstring "Hello, World!")
+           (setproperty ((ns "") "x")) ;; and save "Hello, World!" to the parent scope.
 
            (findproperty ((ns "") "z"))
            (pushstring "Second script defined this.")
            (setproperty ((ns "") "z"))
-
-           (findpropstrict ((ns "") "*global*")) ;; Assign the script environment as *global*.
-           (getlocal 0)
-           (setproperty ((ns "") "*global*"))
 
            (returnvoid)
            )))))
