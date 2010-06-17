@@ -31,7 +31,7 @@ run-gosh :
 partial : examples/partial1.sx.abc examples/partial2.sx.abc
 	avmshell examples/partial1.sx.abc examples/partial2.sx.abc
 
-all : test test-dump run run-gosh partial test-regression test-swf
+all : test test-dump run run-gosh test-define partial test-regression test-swf
 
 # unit test
 test :
