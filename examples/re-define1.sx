@@ -1,0 +1,39 @@
+; -*- lisp -*-
+
+(asm
+ (method
+  (((signature
+     ((return_type *) (param_type ()) (name "re-define1") (flags 0) (options ()) (param_names ())))
+    (code (
+           (getlocal 0) ;; Set up the globl scope.
+           (pushscope)
+
+           (getlex ((ns "") "*global*")) ;; Configure *global* if it's undefined.
+           (iftrue L1)
+           (getlocal 0)
+           (getlocal 0)
+           (setproperty ((ns "") "*global*"))
+           L1
+           (getlex ((ns "") "*global*")) ;; Push *global* on above of the script environment.
+           (pushscope)
+
+           (findproperty ((ns "") "x"))
+           (pushstring "First script defined this.")
+           (setproperty ((ns "") "x"))
+
+           (findproperty ((ns "") "y"))
+           (pushstring "First script defined this.")
+           (setproperty ((ns "") "y"))
+
+           (findpropstrict ((ns "") "*global*")) ;; Assign the script environment as *global*.
+           (getlocal 0)
+           (setproperty ((ns "") "*global*"))
+
+           (returnvoid)
+           )))))
+ (script (((init (method 0))
+           (trait (
+                   ((kind slot) (name ((ns "") "*global*")) (slot_id 1) (type_name *) (vindex 0) (metadata ()))
+                   ((kind slot) (name ((ns "") "x")) (slot_id 2) (type_name *) (vindex 0) (metadata ()))
+                   ((kind slot) (name ((ns "") "y")) (slot_id 3) (type_name *) (vindex 0) (metadata ()))
+                   ))))))

@@ -1,0 +1,37 @@
+; -*- lisp -*-
+
+(asm
+ (method
+  (((signature
+     ((return_type *) (param_type ()) (name "re-define3") (flags 0) (options ()) (param_names ())))
+    (code
+     ((getlocal 0)
+      (pushscope)
+
+      (getlex ((ns "") "print"))
+      (pushnull)
+      (getlex ((ns "") "*global*"))
+      (call 1)
+      (pop)
+
+      (getlex ((ns "") "print"))
+      (pushnull)
+      (getlex ((ns "") "x"))
+      (call 1)
+      (pop)
+
+      (getlex ((ns "") "print"))
+      (pushnull)
+      (getlex ((ns "") "y"))
+      (call 1)
+      (pop)
+
+      (getlex ((ns "") "print"))
+      (pushnull)
+      (getlex ((ns "") "z"))
+      (call 1)
+      (pop)
+
+      (returnvoid)))
+    )))
+ (script (((init (method 0)) (trait ())))))

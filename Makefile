@@ -71,3 +71,8 @@ clean :
 
 %.sx.abc : %.sx
 	$(ASM) $<
+
+test-define : examples/re-define1.sx.abc examples/re-define2.sx.abc examples/re-define3.sx.abc
+#	avmshell -Dverbose=interp $^
+	avmshell examples/re-define1.sx.abc examples/re-define2.sx.abc examples/re-define3.sx.abc
+#	avmshell examples/re-define2.sx.abc examples/re-define1.sx.abc examples/re-define3.sx.abc
