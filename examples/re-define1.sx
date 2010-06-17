@@ -13,7 +13,7 @@
            (setproperty ((ns "") "x"))
 
            (findproperty ((ns "") "y"))
-           (pushstring "First script defined this.")
+           (pushstring "y is defined at the first script.")
            (setproperty ((ns "") "y"))
 
            (returnvoid)

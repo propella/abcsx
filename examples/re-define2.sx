@@ -13,7 +13,7 @@
            (setproperty ((ns "") "x")) ;; and save "Hello, World!" to the parent scope.
 
            (findproperty ((ns "") "z"))
-           (pushstring "Second script defined this.")
+           (pushstring "z is defined at the second script.")
            (setproperty ((ns "") "z"))
 
            (returnvoid)
