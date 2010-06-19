@@ -816,7 +816,13 @@
     (if (method-info-HAS_PARAM_NAMES (ref 'flags x)) (error "HAS_OPTIONAL is not supported yet") '()) ;todo
   )))
 
-(define write-exception_info (lambda (x port) (error "exception_info is not supported yet")))
+(define write-exception_info
+  (lambda (x port)
+    (write-u30 (ref 'from x) port)
+    (write-u30 (ref 'to x) port)
+    (write-u30 (ref 'target x) port)
+    (write-id 'string (ref 'exc_type x) port)
+    (write-id 'string (ref 'var_name x) port)))
 
 ;;; metadata_info writer
 
