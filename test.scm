@@ -335,6 +335,15 @@
 		 '((name (string 1)) (items (((key (string 2)) (value (string 3)))
 					     ((key (string 4)) (value (string 5)))))))
 
+;;; Round trip of exception_info
+(roundtrip-check write-exception_info read-exception_info
+                 '((from 1)
+                   (to 2)
+                   (target 3)
+                   (exc_type (multiname 4))
+                   (var_name (multiname 5))))
+
+;;; Round trip of traits_info
 (roundtrip-check write-traits_info read-traits_info
 		 '((kind slot)
 		   (name (multiname 3))
@@ -361,8 +370,6 @@
 							 ((key (string 4)) (value (string 5))))))
 			      ((name (string 6)) (items (((key (string 7)) (value (string 8))))))
 			      ))))
-
-
 
 (roundtrip-check write-traits_info read-traits_info
                  '((kind method)

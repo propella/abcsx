@@ -23,6 +23,7 @@ run :
 	$(RUNASM) examples/namespace.sx
 	$(RUNASM) examples/array.sx
 	$(RUNASM) examples/with.sx
+	$(RUNASM) examples/exception.sx
 #	$(RUNASM) examples/activation.sx -- works only before tamarin 711
 
 run-gosh :

@@ -487,8 +487,8 @@
     `((from ,(read-u30 port))
       (to ,(read-u30 port))
       (target ,(read-u30 port))
-      (exc_type ,(read-id 'string port))
-      (var_name ,(read-id 'string port)))))
+      (exc_type ,(read-id 'multiname port))
+      (var_name ,(read-id 'multiname port)))))
 
 ;;; method_body_info reader
 
@@ -821,8 +821,8 @@
     (write-u30 (ref 'from x) port)
     (write-u30 (ref 'to x) port)
     (write-u30 (ref 'target x) port)
-    (write-id 'string (ref 'exc_type x) port)
-    (write-id 'string (ref 'var_name x) port)))
+    (write-id 'multiname (ref 'exc_type x) port)
+    (write-id 'multiname (ref 'var_name x) port)))
 
 ;;; metadata_info writer
 
@@ -1202,12 +1202,13 @@
 	'()
 	(let* ((method (car xs))
 	       (hint (from-asm-make-hint method))
+	       (exception (ref* 'exception method '()))
 	       (trait (ref* 'trait method '()))
 	       (code (ref 'code method)))
 	  (cons `((method ,index)
 		  ,@hint
 		  (code ,code)
-		  (exception ())
+		  (exception ,exception)
 		  (trait ,trait))
 		(*from-asm-method_body (cdr xs) (add1 index)))))))
 

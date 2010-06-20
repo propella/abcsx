@@ -16,6 +16,9 @@ CallProperty   of Cpool.multiname * int: op=0x46; stack= 1-arg1; const=[entry ar
 
 ** avm2overview.pdf
 
+4.12 Exception
+exc_type and var_name are multiname instead of string
+
 greaterthan と greaterequals の formats が両方 0xaf
 
 * sassy

@@ -80,7 +80,7 @@
     (#x56 (newarray u30) (stack (- 1 (arg 0))))
     (#x57 (newactivation) (stack 1))
     (#x58 (newclass u30)) ; todo ClassInfo
-    (#x5a (newcatch u30) (stack 1)) ; todo exception info
+    (#x5a (newcatch u30) (stack 2))
     (#x5d (findpropstrict multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
     (#x5e (findproperty multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
     (#x5f (finddef multiname) (stack 1)) ; FIXME: Doesn't consider runtime names
