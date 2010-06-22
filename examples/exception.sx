@@ -4,9 +4,12 @@
     (code
      ((0 getlocal_0)
       (1 pushscope)
+      L1
       (2 pushstring "Hello, World!")
       (4 throw)
-      (5 jump L1)
+      L2
+      (5 jump L4)
+      L3
       (9 getlocal_0)
       (10 pushscope)
       (11 newcatch 0)
@@ -23,12 +26,15 @@
       (29 pop)
       (30 popscope)
       (31 kill 1)
-      L1
+      L4
       (33 returnvoid)))
+    (trait ())
     (exception
-     (((from 2)
-       (to 5)
-       (target 9)
+     (((from L1)
+       (to L2)
+       (target L3)
        (exc_type ((ns "") "String"))
        (var_name ((ns "") "e"))))))))
+ (instance ())
+ (class ())
  (script (((init (method 0)) (trait ())))))

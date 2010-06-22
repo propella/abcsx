@@ -431,11 +431,40 @@
 	  (find-label-new offset labels)
 	  labels))))
 
+(define find-label-exception
+  (lambda (exception labels)
+    (let ((from   (cadr (cadr (car   exception))))
+          (to     (cadr (cadr (cadr  exception))))
+          (target (cadr (cadr (caddr exception)))))
+      (let* ((labels (find-label-new from labels))
+             (labels (find-label-new to labels))
+             (labels (find-label-new target labels)))
+        labels))))
+
+(define insert-label-exception
+  (lambda (exception labels)
+    (let ((from   (cadr (cadr (car   exception))))
+          (to     (cadr (cadr (cadr  exception))))
+          (target (cadr (cadr (caddr exception))))
+          (rest (cdddr exception)))
+      `((from ,(label-from-list from labels))
+        (to ,(label-from-list to labels))
+        (target ,(label-from-list target labels))
+        . ,rest))))
+
+(define make-label-exceptions
+  (lambda (exceptions) 
+    (let ((labels (fold find-label-exception '() exceptions)))
+      (let ((labeled (map
+                      (lambda (exception) (insert-label-exception exception labels))
+                      exceptions)))
+        (cons labeled labels)))))
+      
 ;; Return all jump addreses in reverse order
 ;; The result numbers are used for label index. For example,
 ;; 3 in (3 4 5) is L2 because 3 is the third in reverse order.
 (define find-label
-  (lambda (code) (fold *find-label '() code)))
+  (lambda (code labels) (fold *find-label labels code)))
 
 ;; instruction reader
 
@@ -472,21 +501,21 @@
 	     (cons (read-arguments spec pos port) decoded) port))))))
 
 (define read-instructions
-  (lambda (port)
+  (lambda (port labels)
     (let* ((code (reverse (read-instruction '() port)))
-	   (labels (find-label code)))
+	   (labels (find-label code labels)))
       (insert-label code labels))))
 
 (define decode-instructions
-  (lambda (code)
+  (lambda (code labels)
     (let ((code-port (open-input-bytes code)))
-      (read-instructions code-port))))
+      (read-instructions code-port labels))))
 
 (define read-exception_info
   (lambda (port)
-    `((from ,(read-u30 port))
-      (to ,(read-u30 port))
-      (target ,(read-u30 port))
+    `((from ,(read-id 'offset port))
+      (to ,(read-id 'offset port))
+      (target ,(read-id 'offset port))
       (exc_type ,(read-id 'multiname port))
       (var_name ,(read-id 'multiname port)))))
 
@@ -502,14 +531,17 @@
 	   (code_length (read-u30 port))
 	   (code (read-bytes code_length port))
 	   (exception (read-list0 read-exception_info port))
-	   (trait (read-traits_info* port)))
+	   (trait (read-traits_info* port))
+           (labeled-pair (make-label-exceptions exception))
+           (labeled-exception (car labeled-pair))
+           (labels (cdr labeled-pair)))
       `((method ,method)
 	(max_stack ,max_stack)
 	(local_count ,local_count)
 	(init_scope_depth ,init_scope_depth)
 	(max_scope_depth ,max_scope_depth)
-	(code ,(decode-instructions code))
-	(exception ,exception)
+	(code ,(decode-instructions code labels))
+	(exception ,labeled-exception)
 	(trait ,trait)))))
 
 ;;; abcFile reader
@@ -818,9 +850,9 @@
 
 (define write-exception_info
   (lambda (x port)
-    (write-u30 (ref 'from x) port)
-    (write-u30 (ref 'to x) port)
-    (write-u30 (ref 'target x) port)
+    (write-id 'offset (ref 'from x) port)
+    (write-id 'offset (ref 'to x) port)
+    (write-id 'offset (ref 'target x) port)
     (write-id 'multiname (ref 'exc_type x) port)
     (write-id 'multiname (ref 'var_name x) port)))
 
@@ -1015,7 +1047,8 @@
 (define write-label-replace
   (lambda (lines)
     (let ((dst-labels (write-label-extract lines)))
-      (*write-label-replace lines dst-labels))))
+      (cons (*write-label-replace lines dst-labels)
+            dst-labels))))
 
 (define write-offset (lambda (x port)
   (let ((offset (+ (file-position port) 3)))
@@ -1057,16 +1090,36 @@
 
 (define encode-instructions
   (lambda (code)
-    (let ((*code (write-label-replace code)))
-      (call-with-output-bytes
-       (lambda (port)
-	 (write-instructions *code port))))))
+    (let ((code-pair (write-label-replace code)))
+      (cons
+       (call-with-output-bytes
+        (lambda (port)
+          (write-instructions (car code-pair) port)))
+       (cdr code-pair)))))
+
+(define *write-label-replace-exception
+  (lambda (exception dst-labels)
+    (let ((from   (cadr (car   exception)))
+          (to     (cadr (cadr  exception)))
+          (target (cadr (caddr exception)))
+          (rest (cdddr exception)))
+      `((from   (offset ,(hash-ref dst-labels from)))
+        (to     (offset ,(hash-ref dst-labels to)))
+        (target (offset ,(hash-ref dst-labels target)))
+        . ,rest))))
+
+(define write-label-replace-exception
+  (lambda (exceptions dst-labels)
+    (map (lambda (e) (*write-label-replace-exception e dst-labels)) exceptions)))
 
 ;;; method_body_info writer
 
 (define write-method_body_info (lambda (x port)
-  (let* ((code (encode-instructions (ref 'code x)))
-	 (code_length (bytes-length code)))
+  (let* ((code-pair (encode-instructions (ref 'code x)))
+         (code (car code-pair))
+         (labels (cdr code-pair))
+	 (code_length (bytes-length code))
+         (exception (write-label-replace-exception (ref 'exception x) labels)))
     (write-u30 (ref 'method x) port)
     (write-u30 (ref 'max_stack x) port)
     (write-u30 (ref 'local_count x) port)
@@ -1074,7 +1127,7 @@
     (write-u30 (ref 'max_scope_depth x) port)
     (write-u30 code_length port)
     (write-bytes code port)
-    (write-list0 write-exception_info (ref 'exception x) port)
+    (write-list0 write-exception_info exception port)
     (write-list0 write-traits_info (ref 'trait x) port)
     )))
 

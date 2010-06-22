@@ -242,13 +242,13 @@
 (check (to-bytes write-instruction '(getlocal_0)) => (bytes #xd0))
 
 (check (decode-instructions
-	(encode-instructions
+	(car (encode-instructions
 	 '((getlocal 0)
 	   (pushscope)
 	   (findpropstrict (multiname 1))
 	   (pushstring (string 4))
 	   (callproperty (multiname 2) 1)
-	   (returnvoid)))) => 
+	   (returnvoid)))) '()) => 
 	   '((0 getlocal 0)
 	     (2 pushscope)
 	     (3 findpropstrict (multiname 1))
@@ -256,8 +256,8 @@
 	     (7 callproperty (multiname 2) 1)
 	     (10 returnvoid)))
 
-(roundtrip-check (lambda (x p) (write-bytes (encode-instructions x) p))
- 		 read-instructions
+(roundtrip-check (lambda (x p) (write-bytes (car (encode-instructions x)) p))
+ 		 (lambda (x) (read-instructions x '()))
  		 '((0 getlocal_0)))
 
 ;;; decode-id
@@ -337,9 +337,9 @@
 
 ;;; Round trip of exception_info
 (roundtrip-check write-exception_info read-exception_info
-                 '((from 1)
-                   (to 2)
-                   (target 3)
+                 '((from (offset 1))
+                   (to (offset 2))
+                   (target (offset 3))
                    (exc_type (multiname 4))
                    (var_name (multiname 5))))
 
@@ -412,7 +412,7 @@
 
 (check (find-label '((_ jump (offset 9))
 		     (_ ifgt (offset 13))
-		     (_ jump (offset 9)))) => '(13 9))
+		     (_ jump (offset 9))) '()) => '(13 9))
 
 (check (insert-label '((0 jump (offset 8))
 		       (4 ifgt (offset 4))
@@ -423,6 +423,37 @@
 	    (4 ifgt L2)
 	    L1
 	    (8 jump L1)))
+
+(check (find-label-exception '((from (offset 2))
+                               (to (offset 5))
+                               (target (offset 9))
+                               (exc_type (multiname 1))
+                               (var_name (multiname 2))) '(9))
+       => '(5 2 9))
+
+(check (label-from-list 5 '(5 2 9)) => 'L3)
+
+(check (insert-label-exception '((from (offset 2))
+                                 (to (offset 5))
+                                 (target (offset 9))
+                                 (exc_type (multiname 1))
+                                 (var_name (multiname 2)))
+                               '(5 2 9))
+       => '((from L2)
+            (to L3)
+            (target L1)
+            (exc_type (multiname 1))
+            (var_name (multiname 2))))
+
+(check (make-label-exceptions '(((from (offset 1)) (to (offset 2)) (target (offset 3))
+                                 (exc_type (multiname 1)) (var_name (multiname 2)))
+                                ((from (offset 2)) (to (offset 3)) (target (offset 4))
+                                 (exc_type (multiname 3)) (var_name (multiname 4)))))
+       => '((((from L1) (to L2) (target L3)
+              (exc_type (multiname 1)) (var_name (multiname 2)))
+             ((from L2) (to L3) (target L4)
+               (exc_type (multiname 3)) (var_name (multiname 4))))
+            . (4 3 2 1)))
 
 ;;; Jump writer
 
@@ -459,18 +490,35 @@
   (check (hash-ref dst-labels 'L2) => 12))
 
 ;; Set position and placeholder.
-(check (write-label-replace
+(check (car (write-label-replace
 	'(L1
 	  (jump L1)
 	  (jump L2)
 	  (jump L2)
 	  L2
-	  ))
+	  )))
        => '(
 	  (jump (offset 0))
 	  (jump (offset 12))
 	  (jump (offset 12)
 	  )))
+
+(let ((labels (cdr (write-label-replace
+                    '(L1
+                      (jump L1)
+                      (jump L2)
+                      (jump L2)
+                      L2
+                      )))))
+  (check (hash-ref labels 'L1) => 0)
+  (check (hash-ref labels 'L2) => 12))
+
+(check (*write-label-replace-exception
+        '((from L1) (to L1) (target L3)
+          (exc_type (multiname 1)) (var_name (multiname 2)))
+        (make-immutable-hash '((L1 . 0) (L2 . 2) (L3 . 10))))
+       => '((from (offset 0)) (to (offset 0)) (target (offset 10))
+              (exc_type (multiname 1)) (var_name (multiname 2))))
   
 ;;; ABC form
 
