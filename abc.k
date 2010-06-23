@@ -513,11 +513,12 @@
 
 (define read-exception_info
   (lambda (port)
-    `((from ,(read-id 'offset port))
-      (to ,(read-id 'offset port))
-      (target ,(read-id 'offset port))
-      (exc_type ,(read-id 'multiname port))
-      (var_name ,(read-id 'multiname port)))))
+    (let ((from     (read-id 'offset port))
+          (to       (read-id 'offset port))
+          (target   (read-id 'offset port))
+          (exc_type (read-id 'multiname port))
+          (var_name (read-id 'multiname port)))
+      `((from, from) (to ,to) (target ,target) (exc_type ,exc_type) (var_name ,var_name)))))
 
 ;;; method_body_info reader
 
