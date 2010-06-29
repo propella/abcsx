@@ -154,8 +154,9 @@
                             (call-with-output-bytes
                              (lambda (p) (write-rgb (cdr tag) p)))
                             out))
-;       ((eq? name 'file-attribute) (record-header-body 69 (bytes #b00001000 0 0 0) out))
-       ((eq? name 'file-attribute) (record-header-body 69 (bytes #x0f 0 0 0) out))
+       ;; FileAttributes: HasMetaData 0, UseNetwork 0, HasAS3 1
+       ;; ((eq? name 'file-attribute) (record-header-body 69 (bytes #b00001000 0 0 0) out))
+       ((eq? name 'file-attribute) (record-header-body 69 (bytes #x08 0 0 0) out))
        ((eq? name 'enable-debugger2) (write-enable-debugger2 (cdr tag) out))
        ((eq? name 'symbol-class) (write-symbol-class (cdr tag) out))
        ((eq? name 'do-abc) (write-do-abc (cdr tag) out))
