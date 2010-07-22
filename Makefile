@@ -63,7 +63,7 @@ test-regression :
 	diff $(REGRESSION)2.sx $(REGRESSION)3.sx
 
 clean :
-	rm -f *.abc examples/*.abc launcher/*.abc Hello.swf
+	rm -f *.abc examples/*.abc Hello.swf
 	rm -f $(REGRESSION)2.sx $(REGRESSION)3.sx
 
 %.abc : %.as
