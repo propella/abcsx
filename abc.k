@@ -889,12 +889,17 @@
   (lambda (x port)
     (let ((slot_id (ref 'slot_id x))
           (type_name (ref 'type_name x))
-          (vindex (if (= (ref 'vindex x) 0)
-                      0
-                      (error "vindex is not supported yet"))))
+          (vindex (ref 'vindex x))
+          (vkind (if (= (ref 'vindex x) 0)
+                     '()
+                     (ref 'vkind x))))
       (write-u30 slot_id port)
       (write-id 'multiname type_name port)
-      (write-u30 vindex port))))
+      (write-u30 vindex port)
+      (if (null? vkind)
+          '()
+          (begin (write-u8 vkind port)
+                 (display "WARNING: Constant slots (vkind) is not supported.\n"))))))
 
 (define write-trait_class
   (lambda (x port)

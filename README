@@ -78,3 +78,7 @@ ABC-form : One-to-One translation to S-expression
 
 PLT-Scheme (mzscheme) 4.2.1
 Gauche 0.8.13
+
+* Bugs
+
+Constant slots (vkind) is not supported properly in the ASM-form writer.
