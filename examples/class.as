@@ -1,9 +1,11 @@
 package {
     public class Foo extends Object {
-	public var bar;
+	public var foo = "Hello,";
+    }
+    public class Bar extends Foo {
+	public var bar = "World!";
     }
 }
 
-var foo = new Foo();
-foo.bar = "Hello, World!";
-print(foo.bar);
+var bar = new Bar();
+print(bar.foo, bar.bar);
