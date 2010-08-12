@@ -95,6 +95,6 @@
  (script
   (((init (method 4))
     (trait (
-            ((kind class) (name ((ns "") "Foo")) (slot_id 1) (classi (class 0)) (metadata ()))
-;            ((kind class) (name ((ns "") "Bar")) (slot_id 2) (classi (class 1)) (metadata ()))
+            ((kind class) (name ((ns "") "Foo")) (slot_id 0) (classi (class 0)) (metadata ()))
+            ((kind class) (name ((ns "") "Bar")) (slot_id 0) (classi (class 1)) (metadata ()))
             ))))))

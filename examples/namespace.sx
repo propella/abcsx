@@ -1,40 +1,36 @@
+;; RTQName test -*- lisp -*-
+
+;; ns = new Namespace ("avmplus");
+;; ns::System.write("Hello World!\n");
+
 (asm
- (ns_set ((ns_set (package "") (private "namespace.as$1"))))
  (method
-  (((signature
-     ((return_type *)
-      (param_type ())
-      (name "")
-      (flags 0)
-      (options ())
-      (param_names ())))
-    (hint
-     ((max_stack 3) (local_count 2) (init_scope_depth 1) (max_scope_depth 2)))
+  (((signature ((return_type *) (param_type ()) (name "") (flags 0) (options ()) (param_names ())))
     (code
-     ((0 getlocal_0)
-      (1 pushscope)
-      (2 findproperty ((ns_set 1) "ns"))
-      (4 findpropstrict ((ns_set 1) "Namespace"))
-      (6 pushstring "avmplus")
-      (8 constructprop ((ns_set 1) "Namespace") 1)
-      (11 setproperty ((ns_set 1) "ns"))
-      (13 findpropstrict ((ns_set 1) "ns"))
-      (15 getproperty ((ns_set 1) "ns"))
-      (17 coerce ((package "") "Namespace"))
-      (19 findpropstrict (rtqname "System"))
-      (21 findpropstrict ((ns_set 1) "ns"))
-      (23 getproperty ((ns_set 1) "ns"))
-      (25 coerce ((package "") "Namespace"))
-      (27 getproperty (rtqname "System"))
-      (29 pushstring "Hello, World!\n")
-      (31 callproperty ((ns_set 1) "write") 1)
-      (34 coerce_a)
-      (35 setlocal_1)
-      (36 getlocal_1)
-      (37 returnvalue)
-      (38 kill 1)))
-    (trait ())
-    (exception ()))))
- (instance ())
- (class ())
+     ((getlocal_0)
+      (pushscope)
+
+      ;; local1 = new Namespace ("avmplus");
+      (getlex ((ns "") "Namespace"))
+      (pushstring "avmplus")
+      (construct 1)
+      (coerce ((ns "") "Namespace"))
+      (setlocal 1)
+
+      ;; push local1::System
+      (getlocal 1)
+      (coerce ((ns "") "Namespace"))
+      (findpropstrict (rtqname "System"))
+      (getlocal 1)
+      (coerce ((ns "") "Namespace"))
+      (getproperty (rtqname "System"))
+
+      ;; push "Hello, World!\n"
+      (pushstring "Hello, World!\n")
+
+      ;; call "write"
+      (callproperty ((ns "") "write") 1)
+
+      (returnvalue)
+      )))))
  (script (((init (method 0)) (trait ())))))
