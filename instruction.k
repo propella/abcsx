@@ -67,15 +67,16 @@
     (#x2f (pushdouble double) (stack 1)) ; note: pushdouble = 46 (0x2f) wrong description in spec
     (#x30 (pushscope) (stack -1) (scope 1))
     (#x40 (newfunction method) (stack 1))
-    (#x41 (call u30) (stack (- -1 (arg 0))))
+    (#x41 (call u30) (stack (- 1 (arg 0))))
     (#x46 (callproperty multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names
     (#x47 (returnvoid))
     (#x48 (returnvalue) (stack -1))
     (#x42 (construct u30) (stack (- 0 (arg 0))))
-    (#x49 (constructsuper u30) (stack (- -1 (arg 0)))) ; FIXME: Doesn't consider runtime names
+    (#x49 (constructsuper u30) (stack (- 1 (arg 0)))) ; FIXME: Doesn't consider runtime names
     (#x4a (constructprop multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names
     (#x4c (callproplex multiname u30) (stack (- 0 (arg 1)))) ; FIXME: Doesn't consider runtime names
     (#x4f (callpropvoid multiname u30) (stack (- 1 (arg 1))))
+    (#x53 (applytype u30) (stack (- 1 (arg 0))))
     (#x55 (newobject u30) (stack (- (+ (arg 0) (arg 0)) 1)))
     (#x56 (newarray u30) (stack (- 1 (arg 0))))
     (#x57 (newactivation) (stack 1))
